@@ -1,5 +1,6 @@
 const express = require("express");
 const expressLayouts = require("express-ejs-layouts");
+const fs = require("fs/promises");
 const path = require("path");
 
 const app = express();
@@ -40,6 +41,24 @@ app.get("/gallery", (req, res) => {
   });
 });
 
+app.get("/tips", async (req, res, next) => {
+  try {
+    const filePath = path.join(__dirname, "data", "travelTips.json");
+    const fileContents = await fs.readFile(filePath, "utf-8");
+    const travelTips = JSON.parse(fileContents);
+
+    res.render("tips", {
+      title: "Student Travel Guide | Travel Tips",
+      activePage: "tips",
+      ctaText: "View Gallery",
+      ctaHref: "/gallery",
+      travelTips
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // This middleware runs only if none of the routes above matched the request.
 // It belongs near the bottom so Express gets a chance to check every real page first.
 app.use((req, res) => {
@@ -49,6 +68,18 @@ app.use((req, res) => {
     ctaText: "Go Home",
     ctaHref: "/",
     requestedUrl: req.originalUrl
+  });
+});
+
+// General error-handling middleware catches real server errors, such as a broken JSON file.
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  res.status(500).render("500", {
+    title: "Server Error | Student Travel Guide",
+    activePage: "",
+    ctaText: "Go Home",
+    ctaHref: "/"
   });
 });
 

@@ -1,0 +1,29 @@
+<section class="subpage-hero tips-hero">
+  <div class="subpage-overlay"></div>
+  <div class="relative z-10 mx-auto max-w-7xl px-6 py-28 lg:px-10">
+    <p class="eyebrow text-[#f3d28b]">JSON powered page</p>
+    <h1 class="font-display mt-5 max-w-4xl text-5xl leading-none text-white md:text-7xl">Small travel habits that make the day smoother.</h1>
+    <p class="mt-6 max-w-2xl text-lg leading-8 text-[#f7efe2]">
+      These tips are stored in a JSON file, loaded by Express, and rendered with an EJS loop.
+    </p>
+  </div>
+</section>
+
+<section class="section-wrap">
+  <div class="section-heading reveal">
+    <p class="eyebrow">Travel notebook</p>
+    <h2 class="font-display">Student travel tips</h2>
+    <p>Each card below comes from <code>data/travelTips.json</code>.</p>
+  </div>
+
+  <div class="tips-grid mt-10">
+    <% travelTips.forEach((tip) => { %>
+      <article class="tip-card reveal">
+        <p class="card-kicker"><%= tip.category %></p>
+        <h2><%= tip.title %></h2>
+        <p><%= tip.description %></p>
+        <a class="text-link" href="<%= tip.link %>">Explore related page</a>
+      </article>
+    <% }) %>
+  </div>
+</section>

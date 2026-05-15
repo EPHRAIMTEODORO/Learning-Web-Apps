@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Pack One Flexible Layer",
+    "category": "Packing",
+    "description": "Bring a light jacket or overshirt that works for chilly buses, breezy beaches, and early trail starts.",
+    "link": "/destinations"
+  },
+  {
+    "title": "Plan Around One Main Stop",
+    "category": "Planning",
+    "description": "Choose one destination as the anchor for the day, then add nearby food, photos, or walks if there is time.",
+    "link": "/destinations"
+  },
+  {
+    "title": "Save Offline Details",
+    "category": "Safety",
+    "description": "Before leaving, save the address, bus route, meeting spot, and return plan in case service gets weak.",
+    "link": "/gallery"
+  },
+  {
+    "title": "Use Golden Hour",
+    "category": "Photos",
+    "description": "Early morning and late afternoon light can make even simple places feel more memorable in photos.",
+    "link": "/gallery"
+  },
+  {
+    "title": "Keep a Small Budget Buffer",
+    "category": "Budget",
+    "description": "Set aside a little extra for snacks, transit changes, parking, or a place you discover along the way.",
+    "link": "/destinations"
+  },
+  {
+    "title": "Leave Time to Wander",
+    "category": "Mindset",
+    "description": "The best part of a student trip is often the unplanned cafe, quiet overlook, or photo you almost missed.",
+    "link": "/gallery"
+  }
+]

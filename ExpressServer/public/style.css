@@ -162,6 +162,11 @@ img {
     url("https://picsum.photos/seed/gallerycover/1800/900");
 }
 
+.tips-hero {
+  background-image: linear-gradient(90deg, rgba(18, 63, 54, 0.78), rgba(18, 63, 54, 0.18)),
+    url("https://picsum.photos/seed/traveltipscover/1800/900");
+}
+
 .eyebrow {
   color: var(--clay);
   font-size: 0.76rem;
@@ -594,6 +599,41 @@ img {
   margin-top: 0;
 }
 
+/* Travel tips page */
+.tips-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tip-card {
+  background: rgba(255, 250, 240, 0.82);
+  border: 1px solid rgba(32, 55, 47, 0.12);
+  border-radius: 1.4rem;
+  box-shadow: 0 24px 70px rgba(32, 55, 47, 0.08);
+  padding: 1.5rem;
+  transition: box-shadow 240ms ease, transform 240ms ease;
+}
+
+.tip-card:hover {
+  box-shadow: 0 34px 90px rgba(32, 55, 47, 0.14);
+  transform: translateY(-5px);
+}
+
+.tip-card h2 {
+  color: var(--forest);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  line-height: 1;
+  margin-top: 0.65rem;
+}
+
+.tip-card p:not(.card-kicker) {
+  color: var(--muted);
+  line-height: 1.75;
+  margin: 1rem 0 1.4rem;
+}
+
 /* Subtle scroll-linked reveal animation */
 .reveal {
   animation: fade-up 800ms ease both;
@@ -627,6 +667,10 @@ img {
   .newsletter-card {
     grid-template-columns: 1fr;
   }
+
+  .tips-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -648,6 +692,10 @@ img {
     grid-column: auto;
     grid-row: auto;
     min-height: 320px;
+  }
+
+  .tips-grid {
+    grid-template-columns: 1fr;
   }
 
   .newsletter-form {
