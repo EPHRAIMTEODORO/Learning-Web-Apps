@@ -40,6 +40,18 @@ app.get("/gallery", (req, res) => {
   });
 });
 
+// This middleware runs only if none of the routes above matched the request.
+// It belongs near the bottom so Express gets a chance to check every real page first.
+app.use((req, res) => {
+  res.status(404).render("404", {
+    title: "404 Page Not Found | Student Travel Guide",
+    activePage: "",
+    ctaText: "Go Home",
+    ctaHref: "/",
+    requestedUrl: req.originalUrl
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
