@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Travel Guide | Gallery</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#f6f4ec] text-[#20372f]">
+  <!-- Shared header and navigation -->
+  <header class="site-header">
+    <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
+      <a class="brand-mark" href="index.html">Student Travel Guide</a>
+      <ul class="hidden items-center gap-8 text-sm font-semibold uppercase tracking-[0.22em] md:flex">
+        <li><a class="nav-link" href="index.html">Home</a></li>
+        <li><a class="nav-link" href="destinations.html">Destinations</a></li>
+        <li><a class="nav-link active" href="gallery.html">Gallery</a></li>
+      </ul>
+      <a class="nav-cta hidden md:inline-flex" href="destinations.html">Start Exploring</a>
+    </nav>
+    <nav class="mobile-nav px-6 pb-5 md:hidden">
+      <a href="index.html">Home</a>
+      <a href="destinations.html">Destinations</a>
+      <a href="gallery.html">Gallery</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Editorial page banner -->
+    <section class="subpage-hero gallery-hero">
+      <div class="subpage-overlay"></div>
+      <div class="relative z-10 mx-auto max-w-7xl px-6 py-28 lg:px-10">
+        <p class="eyebrow text-[#f3d28b]">Photo journal</p>
+        <h1 class="font-display mt-5 max-w-4xl text-5xl leading-none text-white md:text-7xl">Small moments from wide-open days.</h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-[#f7efe2]">
+          A flexible gallery layout for travel photos, captions, and visual storytelling.
+        </p>
+      </div>
+    </section>
+
+    <!-- Interactive photo gallery section -->
+    <section class="section-wrap">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Frames from the road</p>
+        <h2 class="font-display">Travel gallery</h2>
+        <p>Hover over each image to give the photo a subtle editorial lift.</p>
+      </div>
+
+      <div class="gallery-mosaic mt-10">
+        <figure class="gallery-tile large reveal">
+          <img src="https://picsum.photos/seed/oceanphoto/900/700" alt="Ocean travel photo placeholder">
+          <figcaption>Ocean views on a bright afternoon</figcaption>
+        </figure>
+
+        <figure class="gallery-tile reveal">
+          <img src="https://picsum.photos/seed/mountainphoto/700/700" alt="Mountain travel photo placeholder">
+          <figcaption>Mountain air and scenic trails</figcaption>
+        </figure>
+
+        <figure class="gallery-tile reveal">
+          <img src="https://picsum.photos/seed/cityphoto/700/700" alt="City travel photo placeholder">
+          <figcaption>Exploring the city after class</figcaption>
+        </figure>
+
+        <figure class="gallery-tile tall reveal">
+          <img src="https://picsum.photos/seed/templephoto/700/900" alt="Temple travel photo placeholder">
+          <figcaption>Quiet moments near a temple</figcaption>
+        </figure>
+
+        <figure class="gallery-tile reveal">
+          <img src="https://picsum.photos/seed/forestphoto/700/700" alt="Forest travel photo placeholder">
+          <figcaption>Green paths and peaceful forests</figcaption>
+        </figure>
+
+        <figure class="gallery-tile reveal">
+          <img src="https://picsum.photos/seed/sunsetphoto/700/700" alt="Sunset travel photo placeholder">
+          <figcaption>Sunset colors at the end of a trip</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Testimonial style travel note -->
+    <section class="section-wrap pt-0">
+      <div class="testimonial-card reveal">
+        <p class="eyebrow">Student note</p>
+        <blockquote class="font-display mt-4 text-3xl leading-tight md:text-5xl">
+          The best travel photos came from the moments I almost walked past.
+        </blockquote>
+        <p class="mt-6 text-[#5c6f65]">Slow down, look twice, and give ordinary corners a chance to become the story.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Shared footer -->
+  <footer class="site-footer">
+    <p>Student Travel Guide</p>
+    <p>&copy; 2026. Built as a modern HTML, Tailwind, and CSS travel project.</p>
+  </footer>
+</body>
+</html>
