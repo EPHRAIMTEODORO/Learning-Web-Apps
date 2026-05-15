@@ -9,9 +9,6 @@ app.set("view engine", "ejs");
 app.use(expressLayouts);
 app.set("layout", "layout");
 
-app.get("/style.css", (req, res) => {
-  res.sendFile(`${__dirname}/style.css`);
-});
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
