@@ -1,3 +1,117 @@
-<h2>Welcome</h2>
+<!-- Hero banner with editorial overlay -->
+<section class="hero-shell">
+  <div class="hero-overlay"></div>
+  <div class="relative z-10 mx-auto grid min-h-[760px] max-w-7xl items-end gap-10 px-6 pb-16 pt-28 lg:grid-cols-[1.25fr_0.75fr] lg:px-10">
+    <div class="reveal">
+      <p class="eyebrow text-[#f3d28b]">Field notes from a student traveler</p>
+      <h1 class="font-display mt-5 max-w-4xl text-5xl leading-[0.95] text-white md:text-7xl lg:text-8xl">
+        Slow routes, wild views, and places worth remembering.
+      </h1>
+      <p class="mt-7 max-w-2xl text-lg leading-8 text-[#f7efe2]">
+        A magazine-style travel guide for beaches, cities, trails, temples, and quiet places
+        that make a student budget feel surprisingly adventurous.
+      </p>
+      <div class="mt-9 flex flex-wrap gap-4">
+        <a class="primary-button" href="/destinations">Explore Destinations</a>
+        <a class="ghost-button" href="/gallery">View Gallery</a>
+      </div>
+    </div>
 
-<p>This is the home page.</p>
+    <aside class="hero-note reveal">
+      <p class="text-sm uppercase tracking-[0.22em] text-[#f3d28b]">This week</p>
+      <h2 class="font-display mt-3 text-3xl text-white">Sunrise trail journal</h2>
+      <p class="mt-4 text-sm leading-7 text-[#f7efe2]">
+        Pack light, start early, and leave enough time to sit with the view before the route gets busy.
+      </p>
+    </aside>
+  </div>
+</section>
+
+<!-- Highlights section -->
+<section class="section-wrap reveal">
+  <div class="grid gap-5 md:grid-cols-3">
+    <article class="stat-card">
+      <span>05</span>
+      <p>destination styles</p>
+    </article>
+    <article class="stat-card">
+      <span>18</span>
+      <p>photo ideas</p>
+    </article>
+    <article class="stat-card">
+      <span>$</span>
+      <p>student-friendly planning</p>
+    </article>
+  </div>
+</section>
+
+<!-- Featured destination cards -->
+<section class="section-wrap">
+  <div class="section-heading reveal">
+    <p class="eyebrow">Featured routes</p>
+    <h2 class="font-display">Three ways to travel well</h2>
+    <p>Choose the mood first, then let the place do the rest.</p>
+  </div>
+
+  <div class="mt-10 grid gap-6 lg:grid-cols-3">
+    <article class="feature-card group reveal">
+      <img src="https://picsum.photos/seed/calmbay/900/700" alt="A calm beach destination">
+      <div class="feature-card-content">
+        <p>Coastal reset</p>
+        <h3>Quiet beach afternoon</h3>
+        <a href="/destinations">Read the guide</a>
+      </div>
+    </article>
+
+    <article class="feature-card group reveal">
+      <img src="https://picsum.photos/seed/ridgetrail/900/700" alt="A mountain trail destination">
+      <div class="feature-card-content">
+        <p>Highland notes</p>
+        <h3>Mountain trail morning</h3>
+        <a href="/destinations">Read the guide</a>
+      </div>
+    </article>
+
+    <article class="feature-card group reveal">
+      <img src="https://picsum.photos/seed/oldcitywalk/900/700" alt="A city street travel destination">
+      <div class="feature-card-content">
+        <p>Urban wandering</p>
+        <h3>City walk after class</h3>
+        <a href="/destinations">Read the guide</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- Travel story section -->
+<section class="story-band">
+  <div class="section-wrap grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+    <div class="reveal">
+      <p class="eyebrow">Travel story</p>
+      <h2 class="font-display mt-4 text-4xl leading-tight md:text-6xl">The best trips start with curiosity, not a huge budget.</h2>
+    </div>
+    <div class="reveal">
+      <p class="text-lg leading-9 text-[#42564d]">
+        This guide is built around simple, repeatable travel habits: pick one strong destination,
+        plan around golden-hour light, bring only what you need, and leave room for a slow discovery.
+      </p>
+      <a class="text-link mt-6 inline-flex" href="/gallery">See the photo journal</a>
+    </div>
+  </div>
+</section>
+
+<!-- Newsletter signup section -->
+<section class="section-wrap">
+  <div class="newsletter-card reveal">
+    <div>
+      <p class="eyebrow">Notebook</p>
+      <h2 class="font-display mt-3 text-4xl">Get the next travel note</h2>
+      <p class="mt-3 max-w-2xl text-[#5c6f65]">A simple signup design for future trip ideas, photo prompts, and student-friendly planning tips.</p>
+    </div>
+    <form class="newsletter-form">
+      <label class="sr-only" for="email">Email address</label>
+      <input id="email" type="email" placeholder="student@example.com">
+      <button type="submit">Subscribe</button>
+    </form>
+  </div>
+</section>
