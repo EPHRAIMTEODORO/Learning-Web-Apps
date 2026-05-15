@@ -1,0 +1,18 @@
+<header class="site-header">
+  <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
+    <a class="brand-mark" href="/">Student Travel Guide</a>
+    <ul class="hidden items-center gap-8 text-sm font-semibold uppercase tracking-[0.22em] md:flex">
+      <li><a class="nav-link <%= activePage === 'home' ? 'active' : '' %>" href="/">Home</a></li>
+      <li><a class="nav-link <%= activePage === 'destinations' ? 'active' : '' %>" href="/destinations">Destinations</a></li>
+      <li><a class="nav-link <%= activePage === 'gallery' ? 'active' : '' %>" href="/gallery">Gallery</a></li>
+      <li><a class="nav-link <%= activePage === 'tips' ? 'active' : '' %>" href="/tips">Tips</a></li>
+    </ul>
+    <a class="nav-cta hidden md:inline-flex" href="<%= ctaHref %>"><%= ctaText %></a>
+  </nav>
+  <nav class="mobile-nav px-6 pb-5 md:hidden">
+    <a href="/">Home</a>
+    <a href="/destinations">Destinations</a>
+    <a href="/gallery">Gallery</a>
+    <a href="/tips">Tips</a>
+  </nav>
+</header>
