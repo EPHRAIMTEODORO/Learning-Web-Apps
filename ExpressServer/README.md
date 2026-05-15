@@ -17,24 +17,43 @@ Student Travel Guide is a polished multi-page travel website where a student sha
 
 ## Tech Stack
 
+- Express
+- EJS
+- express-ejs-layouts
 - HTML5
 - CSS3
 - Tailwind CSS CDN
 - Responsive CSS Grid and Flexbox
-- No JavaScript
 
 ## How to Run Locally
 
-Open `index.html` in a web browser.
+Install dependencies if needed:
+
+```bash
+npm install
+```
+
+Start the Express server:
+
+```bash
+npm start
+```
+
+Then open:
+
+```txt
+http://localhost:3000
+```
 
 Because Tailwind is loaded through the CDN, an internet connection is needed for the Tailwind utility classes to load correctly.
 
 ## Pages
 
-- `index.html` - Home page with hero banner, featured routes, story section, stats, and newsletter signup design
-- `destinations.html` - Destination cards with images, descriptions, and hover reveal effects
-- `gallery.html` - Travel photo gallery with captions and interactive image hover styling
-- `style.css` - Shared custom styles, design tokens, animations, layout rules, and responsive behavior
+- `/` renders `views/index.ejs` - Home page with hero banner, featured routes, story section, stats, and newsletter signup design
+- `/destinations` renders `views/destinations.ejs` - Destination cards with images, descriptions, and hover reveal effects
+- `/gallery` renders `views/gallery.ejs` - Travel photo gallery with captions and interactive image hover styling
+- `views/layout.ejs` - Shared header, navigation, footer, Tailwind CDN, and stylesheet link
+- `public/style.css` - Shared custom styles, design tokens, animations, layout rules, and responsive behavior
 
 ## How AI Was Used
 
