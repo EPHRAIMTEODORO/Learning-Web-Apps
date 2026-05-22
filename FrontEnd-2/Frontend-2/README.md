@@ -1,16 +1,92 @@
-# React + Vite
+# Week 2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This app is a React task tracker built with smaller pieces called components.
+The main page lives in `src/App.jsx`, and the task UI is split into
+`TaskForm`, `TaskList`, and `TaskItem`.
 
-Currently, two official plugins are available:
+## Components
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Components are reusable functions that return UI. In this app, `App` is the
+main component. It renders the page header, the task summary, the form, and the
+task list.
 
-## React Compiler
+The other components each have one job:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `TaskForm` displays the form for creating a new task.
+- `TaskList` receives the array of tasks and renders a list.
+- `TaskItem` displays one task with its title, details, priority, due date, and
+  completion status.
 
-## Expanding the ESLint configuration
+Splitting the app this way keeps each file focused and easier to update.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Props
+
+Props are values passed from one component to another. They let a parent
+component share data or functions with child components.
+
+In this app, `App` passes the `tasks` array into `TaskList`:
+
+```jsx
+<TaskList tasks={tasks} onToggleTask={toggleTask} />
+```
+
+`TaskList` then passes each individual `task` into `TaskItem`:
+
+```jsx
+<TaskItem key={task.id} task={task} onToggleTask={onToggleTask} />
+```
+
+`App` also passes the `addTask` function into `TaskForm` as `onAddTask`. That
+lets the form send a new task back up to `App`.
+
+## JSX
+
+JSX is the HTML-like syntax used inside React components. It lets us describe
+what should appear on the page while still using JavaScript values.
+
+For example, `App` shows live task counts with JSX expressions:
+
+```jsx
+<strong>{tasks.length}</strong>
+<strong>{completedCount}</strong>
+```
+
+The curly braces let JSX use JavaScript values inside the markup.
+
+## useState
+
+`useState` lets React remember values that can change over time. When state
+changes, React updates the screen automatically.
+
+In `App.jsx`, the tasks are stored in state:
+
+```jsx
+const [tasks, setTasks] = useState(initialTasks)
+```
+
+When a new task is submitted, `setTasks` adds it to the beginning of the list:
+
+```jsx
+setTasks((currentTasks) => [
+  {
+    id: Date.now(),
+    completed: false,
+    ...task,
+  },
+  ...currentTasks,
+])
+```
+
+In `TaskForm.jsx`, `useState` also controls the form inputs:
+
+```jsx
+const [formData, setFormData] = useState(initialForm)
+```
+
+Each input uses a value from `formData`, and `handleChange` updates state when
+the user types. This is called a controlled form because React controls the
+input values.
+
+Together, components, props, JSX, and `useState` make the task tracker work:
+components organize the UI, props move data between components, JSX describes
+the screen, and `useState` keeps the task list and form values updated.
