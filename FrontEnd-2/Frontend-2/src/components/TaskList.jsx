@@ -1,6 +1,6 @@
 import TaskItem from './TaskItem.jsx'
 
-function TaskList({ tasks }) {
+function TaskList({ tasks, onToggleTask }) {
   return (
     <section className="task-list-panel" aria-labelledby="task-list-title">
       <div className="panel-heading">
@@ -10,7 +10,7 @@ function TaskList({ tasks }) {
 
       <ul className="task-list">
         {tasks.map((task) => (
-          <TaskItem key={task.id} task={task} />
+          <TaskItem key={task.id} task={task} onToggleTask={onToggleTask} />
         ))}
       </ul>
     </section>

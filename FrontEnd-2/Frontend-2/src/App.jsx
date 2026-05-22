@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import TaskForm from './components/TaskForm.jsx'
 import TaskList from './components/TaskList.jsx'
 import './App.css'
 
-const tasks = [
+const initialTasks = [
   {
     id: 1,
     title: 'Review project brief',
@@ -30,7 +31,27 @@ const tasks = [
 ]
 
 function App() {
+  const [tasks, setTasks] = useState(initialTasks)
   const completedCount = tasks.filter((task) => task.completed).length
+
+  function addTask(task) {
+    setTasks((currentTasks) => [
+      {
+        id: Date.now(),
+        completed: false,
+        ...task,
+      },
+      ...currentTasks,
+    ])
+  }
+
+  function toggleTask(id) {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task,
+      ),
+    )
+  }
 
   return (
     <main className="app-shell">
@@ -61,8 +82,8 @@ function App() {
       </section>
 
       <section className="tracker-grid" aria-label="Task workspace">
-        <TaskForm />
-        <TaskList tasks={tasks} />
+        <TaskForm onAddTask={addTask} />
+        <TaskList tasks={tasks} onToggleTask={toggleTask} />
       </section>
     </main>
   )

@@ -1,11 +1,18 @@
-function TaskItem({ task }) {
+function TaskItem({ task, onToggleTask }) {
   const statusText = task.completed ? 'Complete' : 'Open'
 
   return (
     <li className={`task-item ${task.completed ? 'is-complete' : ''}`}>
-      <div className="task-check" aria-hidden="true">
+      <button
+        type="button"
+        className="task-check"
+        aria-label={`Mark ${task.title} as ${
+          task.completed ? 'open' : 'complete'
+        }`}
+        onClick={() => onToggleTask(task.id)}
+      >
         {task.completed ? '✓' : ''}
-      </div>
+      </button>
 
       <div className="task-content">
         <div className="task-title-row">
