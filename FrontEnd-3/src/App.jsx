@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
+import {
+  createResourcePost,
+  fetchWebDevResources,
+} from './services/resourceApi'
 import './App.css'
 
 const categories = ['All', 'React', 'CSS', 'JavaScript', 'Tools']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Quick Start']
-const DEV_API_URL = 'https://dev.to/api/articles?tag=webdev&per_page=12'
-const CREATE_RESOURCE_URL = 'https://jsonplaceholder.typicode.com/posts'
 const CREATED_RESOURCES_KEY = 'mini-resource-browser-created-resources'
 const sortOptions = [
   { label: 'Title A-Z', value: 'title' },
@@ -109,47 +110,6 @@ function getCreatedResourceId(title, responseId) {
   return `created-${responseId}-${slug || Date.now()}`
 }
 
-function pickCategory(tags) {
-  if (tags.includes('react')) {
-    return 'React'
-  }
-
-  if (tags.includes('css')) {
-    return 'CSS'
-  }
-
-  if (tags.includes('javascript') || tags.includes('js')) {
-    return 'JavaScript'
-  }
-
-  return 'Tools'
-}
-
-function mapArticleToResource(article) {
-  const tags = article.tag_list ?? []
-  const readableTags = tags.slice(0, 3)
-
-  return {
-    id: String(article.id),
-    title: article.title,
-    category: pickCategory(tags),
-    type: 'Article',
-    level: 'Beginner',
-    readTime: `${article.reading_time_minutes || 5} min`,
-    summary:
-      article.description ||
-      'A web development resource from the DEV Community API.',
-    details:
-      article.description ||
-      'This resource was loaded from the DEV Community public articles API.',
-    outcomes:
-      readableTags.length > 0
-        ? readableTags.map((tag) => `Explore ${tag}`)
-        : ['Read the article', 'Review the concept', 'Apply the idea'],
-    url: article.url,
-  }
-}
-
 function getRouteFromLocation() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
 
@@ -196,10 +156,7 @@ function App() {
       setIsLoading(true)
       setLoadError('')
 
-      const response = await axios.get(DEV_API_URL)
-      const apiResources = response.data
-        .filter((article) => article.title && article.id)
-        .map(mapArticleToResource)
+      const apiResources = await fetchWebDevResources()
 
       if (apiResources.length === 0) {
         throw new Error('The API returned no resources.')
@@ -231,9 +188,9 @@ function App() {
       body: formData.summary,
       userId: 1,
     }
-    const response = await axios.post(CREATE_RESOURCE_URL, postPayload)
+    const responseData = await createResourcePost(postPayload)
     const createdResource = {
-      id: getCreatedResourceId(formData.title, response.data.id ?? Date.now()),
+      id: getCreatedResourceId(formData.title, responseData.id ?? Date.now()),
       title: formData.title,
       category: formData.category,
       type: formData.type,
