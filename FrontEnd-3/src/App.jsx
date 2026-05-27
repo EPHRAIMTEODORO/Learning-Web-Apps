@@ -17,6 +17,9 @@ const resources = [
     level: 'Intermediate',
     readTime: '12 min',
     summary: 'Compare local state, derived state, and prop-driven UI choices.',
+    details:
+      'Learn when to keep state close to a component, when to lift it, and how to avoid duplicating values that can be calculated during render.',
+    outcomes: ['Identify derived state', 'Choose state ownership', 'Simplify props'],
   },
   {
     title: 'Responsive Layout Recipes',
@@ -25,6 +28,9 @@ const resources = [
     level: 'Beginner',
     readTime: '8 min',
     summary: 'Practical grid and flex layouts for dashboards, cards, and forms.',
+    details:
+      'Use repeatable CSS layout patterns to keep pages readable on phones, tablets, and desktop screens.',
+    outcomes: ['Build fluid grids', 'Control spacing', 'Prevent overflow'],
   },
   {
     title: 'Array Method Practice',
@@ -33,6 +39,9 @@ const resources = [
     level: 'Beginner',
     readTime: '15 min',
     summary: 'Practice map, filter, reduce, and sorting with real UI data.',
+    details:
+      'Work through small data transformations that mirror the filtering and sorting logic used in resource browsers.',
+    outcomes: ['Transform arrays', 'Filter datasets', 'Sort visible results'],
   },
   {
     title: 'Vite Project Checklist',
@@ -41,6 +50,9 @@ const resources = [
     level: 'Quick Start',
     readTime: '5 min',
     summary: 'A short setup checklist for scripts, assets, linting, and builds.',
+    details:
+      'Review the basic project pieces that make a Vite app easier to run, test, and hand off.',
+    outcomes: ['Check scripts', 'Organize assets', 'Verify builds'],
   },
   {
     title: 'Component Composition',
@@ -49,6 +61,9 @@ const resources = [
     level: 'Advanced',
     readTime: '10 min',
     summary: 'Build reusable UI by splitting data, layout, and interaction logic.',
+    details:
+      'Study how smaller components can share responsibility without becoming tightly coupled or hard to reuse.',
+    outcomes: ['Split UI concerns', 'Reuse layout', 'Pass clear props'],
   },
   {
     title: 'Form Validation Basics',
@@ -57,22 +72,51 @@ const resources = [
     level: 'Intermediate',
     readTime: '14 min',
     summary: 'Validate inputs, show helpful errors, and keep form state clear.',
+    details:
+      'Create form interactions that give users timely feedback without making the interface feel noisy.',
+    outcomes: ['Validate input', 'Show errors', 'Reset state'],
   },
 ]
 
-function getPageFromHash() {
-  return window.location.hash === '#/resources' ? 'resources' : 'home'
+function getResourceSlug(resource) {
+  return resource.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function getRouteFromHash() {
+  const hash = window.location.hash
+
+  if (!hash || hash === '#/' || hash === '#collections') {
+    return { name: 'home' }
+  }
+
+  if (hash === '#/resources') {
+    return { name: 'resources' }
+  }
+
+  if (hash.startsWith('#/resources/')) {
+    const slug = hash.replace('#/resources/', '')
+    const hasResource = resources.some(
+      (resource) => getResourceSlug(resource) === slug,
+    )
+
+    return hasResource ? { name: 'detail', slug } : { name: 'notFound' }
+  }
+
+  return { name: 'notFound' }
 }
 
 function App() {
-  const [page, setPage] = useState(getPageFromHash)
+  const [route, setRoute] = useState(getRouteFromHash)
   const [activeCategory, setActiveCategory] = useState('All')
   const [activeLevel, setActiveLevel] = useState('All')
   const [sortBy, setSortBy] = useState('title')
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    const handleHashChange = () => setPage(getPageFromHash())
+    const handleHashChange = () => setRoute(getRouteFromHash())
 
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
@@ -142,9 +186,13 @@ function App() {
     setSortBy('title')
   }
 
+  const selectedResource = resources.find(
+    (resource) => getResourceSlug(resource) === route.slug,
+  )
+
   return (
     <main className="app-shell">
-      {page === 'resources' ? (
+      {route.name === 'resources' ? (
         <ResourceListPage
           activeCategory={activeCategory}
           activeLevel={activeLevel}
@@ -157,6 +205,10 @@ function App() {
           sortBy={sortBy}
           visibleResources={listResources}
         />
+      ) : route.name === 'detail' && selectedResource ? (
+        <ResourceDetailPage resource={selectedResource} />
+      ) : route.name === 'notFound' ? (
+        <NotFoundPage />
       ) : (
         <HomePage
           activeCategory={activeCategory}
@@ -296,6 +348,12 @@ function HomePage({
                 <span>{resource.type}</span>
                 <span>{resource.level}</span>
               </div>
+              <a
+                className="detail-link"
+                href={`#/resources/${getResourceSlug(resource)}`}
+              >
+                View details
+              </a>
             </article>
           ))}
         </div>
@@ -425,6 +483,12 @@ function ResourceListPage({
                   <div className="resource-row-meta">
                     <span>{resource.type}</span>
                     <span>{resource.level}</span>
+                    <a
+                      className="detail-link compact"
+                      href={`#/resources/${getResourceSlug(resource)}`}
+                    >
+                      Details
+                    </a>
                   </div>
                 </article>
               ))}
@@ -435,6 +499,76 @@ function ResourceListPage({
               <p>Try clearing filters or searching with a broader term.</p>
             </div>
           )}
+        </div>
+      </section>
+    </>
+  )
+}
+
+function ResourceDetailPage({ resource }) {
+  return (
+    <>
+      <section className="detail-hero" aria-labelledby="detail-title">
+        <Topbar activePage="resources" />
+        <div className="detail-hero-grid">
+          <div>
+            <p className="eyebrow">{resource.category}</p>
+            <h1 id="detail-title">{resource.title}</h1>
+            <p className="hero-lede">{resource.summary}</p>
+          </div>
+          <div className="detail-summary">
+            <span>{resource.type}</span>
+            <span>{resource.level}</span>
+            <span>{resource.readTime}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="detail-page" aria-label="Resource details">
+        <article className="detail-content">
+          <h2>Overview</h2>
+          <p>{resource.details}</p>
+
+          <h2>What you will practice</h2>
+          <ul className="outcome-list">
+            {resource.outcomes.map((outcome) => (
+              <li key={outcome}>{outcome}</li>
+            ))}
+          </ul>
+        </article>
+
+        <aside className="detail-actions" aria-label="Resource actions">
+          <a className="home-link" href="#/resources">
+            Back to resources
+          </a>
+          <a className="home-link" href="#/">
+            Back home
+          </a>
+        </aside>
+      </section>
+    </>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <>
+      <section className="not-found-page" aria-labelledby="not-found-title">
+        <Topbar activePage="none" />
+        <div className="not-found-card">
+          <p className="eyebrow">404</p>
+          <h1 id="not-found-title">Page not found.</h1>
+          <p>
+            The page you tried to open does not exist in this resource browser.
+          </p>
+          <div className="not-found-actions">
+            <a className="home-link" href="#/resources">
+              View resources
+            </a>
+            <a className="home-link" href="#/">
+              Go home
+            </a>
+          </div>
         </div>
       </section>
     </>
