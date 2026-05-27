@@ -3,6 +3,13 @@ import {
   createResourcePost,
   fetchWebDevResources,
 } from './services/resourceApi'
+import {
+  getResourceDetailPath,
+  getRouteFromLocation,
+  navigateTo,
+  ROUTE_NAMES,
+  ROUTE_PATHS,
+} from './routes/resourceRoutes'
 import './App.css'
 
 const categories = ['All', 'React', 'CSS', 'JavaScript', 'Tools']
@@ -110,29 +117,6 @@ function getCreatedResourceId(title, responseId) {
   return `created-${responseId}-${slug || Date.now()}`
 }
 
-function getRouteFromLocation() {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/'
-
-  if (path === '/') {
-    return { name: 'home' }
-  }
-
-  if (path === '/resources') {
-    return { name: 'resources' }
-  }
-
-  if (path === '/resources/new') {
-    return { name: 'create' }
-  }
-
-  if (path.startsWith('/resources/')) {
-    const id = decodeURIComponent(path.replace('/resources/', ''))
-    return { name: 'detail', id }
-  }
-
-  return { name: 'notFound' }
-}
-
 function App() {
   const [route, setRoute] = useState(getRouteFromLocation)
   const [baseResources, setBaseResources] = useState([])
@@ -207,8 +191,7 @@ function App() {
 
     setCreatedResources(nextCreatedResources)
     saveCreatedResources(nextCreatedResources)
-    window.history.pushState({}, '', '/resources')
-    setRoute(getRouteFromLocation())
+    setRoute(navigateTo(ROUTE_PATHS.resources))
   }
 
   const homeResources = useMemo(() => {
@@ -281,9 +264,9 @@ function App() {
 
   return (
     <main className="app-shell">
-      {route.name === 'create' ? (
+      {route.name === ROUTE_NAMES.create ? (
         <CreateResourcePage onCreateResource={createResource} />
-      ) : route.name === 'resources' ? (
+      ) : route.name === ROUTE_NAMES.resources ? (
         <ResourceListPage
           activeCategory={activeCategory}
           activeLevel={activeLevel}
@@ -299,19 +282,19 @@ function App() {
           sortBy={sortBy}
           visibleResources={listResources}
         />
-      ) : route.name === 'detail' && selectedResource ? (
+      ) : route.name === ROUTE_NAMES.detail && selectedResource ? (
         <ResourceDetailPage resource={selectedResource} routeId={route.id} />
-      ) : route.name === 'detail' && isLoading ? (
+      ) : route.name === ROUTE_NAMES.detail && isLoading ? (
         <LoadingDetailPage routeId={route.id} />
-      ) : route.name === 'detail' && loadError ? (
+      ) : route.name === ROUTE_NAMES.detail && loadError ? (
         <ResourceLoadErrorPage
           loadError={loadError}
           onRetry={loadResources}
           routeId={route.id}
         />
-      ) : route.name === 'detail' ? (
+      ) : route.name === ROUTE_NAMES.detail ? (
         <NotFoundPage />
-      ) : route.name === 'notFound' ? (
+      ) : route.name === ROUTE_NAMES.notFound ? (
         <NotFoundPage />
       ) : (
         <HomePage
@@ -333,23 +316,29 @@ function App() {
 function Topbar({ activePage }) {
   return (
     <nav className="topbar" aria-label="Primary navigation">
-      <a className="brand" href="/">
+      <a className="brand" href={ROUTE_PATHS.home}>
         Resource Browser
       </a>
       <div className="nav-actions">
-        <a className={activePage === 'home' ? 'active' : ''} href="/">
+        <a
+          className={activePage === ROUTE_NAMES.home ? 'active' : ''}
+          href={ROUTE_PATHS.home}
+        >
           Home
         </a>
         <a
-          className={activePage === 'resources' ? 'active' : ''}
-          href="/resources"
+          className={activePage === ROUTE_NAMES.resources ? 'active' : ''}
+          href={ROUTE_PATHS.resources}
         >
           Resources
         </a>
-        <a className={activePage === 'create' ? 'active' : ''} href="/resources/new">
+        <a
+          className={activePage === ROUTE_NAMES.create ? 'active' : ''}
+          href={ROUTE_PATHS.create}
+        >
           Create
         </a>
-        <a href="/#collections">Collections</a>
+        <a href={ROUTE_PATHS.collections}>Collections</a>
       </div>
     </nav>
   )
@@ -406,7 +395,7 @@ function HomePage({
   return (
     <>
       <section className="home-hero" aria-labelledby="page-title">
-        <Topbar activePage="home" />
+        <Topbar activePage={ROUTE_NAMES.home} />
 
         <div className="hero-grid">
           <div className="hero-copy">
@@ -471,7 +460,10 @@ function HomePage({
                   <span>{resource.type}</span>
                   <span>{resource.level}</span>
                 </div>
-                <a className="detail-link" href={`/resources/${resource.id}`}>
+                <a
+                  className="detail-link"
+                  href={getResourceDetailPath(resource.id)}
+                >
                   View details
                 </a>
               </article>
@@ -520,7 +512,7 @@ function ResourceListPage({
   return (
     <>
       <section className="list-hero" aria-labelledby="resource-list-title">
-        <Topbar activePage="resources" />
+        <Topbar activePage={ROUTE_NAMES.resources} />
         <div className="list-hero-copy">
           <p className="eyebrow">Resource list</p>
           <h1 id="resource-list-title">Browse every learning resource.</h1>
@@ -594,10 +586,10 @@ function ResourceListPage({
               <h2>{visibleResources.length} resources found</h2>
             </div>
             <div className="toolbar-actions">
-              <a className="home-link" href="/resources/new">
+              <a className="home-link" href={ROUTE_PATHS.create}>
                 Create resource
               </a>
-              <a className="home-link" href="/">
+              <a className="home-link" href={ROUTE_PATHS.home}>
                 Back home
               </a>
             </div>
@@ -622,7 +614,7 @@ function ResourceListPage({
                     <span>{resource.level}</span>
                     <a
                       className="detail-link compact"
-                      href={`/resources/${resource.id}`}
+                      href={getResourceDetailPath(resource.id)}
                     >
                       Details
                     </a>
@@ -677,7 +669,7 @@ function CreateResourcePage({ onCreateResource }) {
   return (
     <>
       <section className="list-hero" aria-labelledby="create-resource-title">
-        <Topbar activePage="create" />
+        <Topbar activePage={ROUTE_NAMES.create} />
         <div className="list-hero-copy">
           <p className="eyebrow">Create resource</p>
           <h1 id="create-resource-title">Add a learning resource.</h1>
@@ -801,7 +793,7 @@ function CreateResourcePage({ onCreateResource }) {
             <button className="detail-link" disabled={isSubmitting} type="submit">
               {isSubmitting ? 'Creating...' : 'Create resource'}
             </button>
-            <a className="home-link" href="/resources">
+            <a className="home-link" href={ROUTE_PATHS.resources}>
               Cancel
             </a>
           </div>
@@ -851,7 +843,7 @@ function ResourceDetailPage({ resource, routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-title">
-        <Topbar activePage="resources" />
+        <Topbar activePage={ROUTE_NAMES.resources} />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">{resource.category}</p>
@@ -893,10 +885,10 @@ function ResourceDetailPage({ resource, routeId }) {
               Open article
             </a>
           )}
-          <a className="home-link" href="/resources">
+          <a className="home-link" href={ROUTE_PATHS.resources}>
             Back to resources
           </a>
-          <a className="home-link" href="/">
+          <a className="home-link" href={ROUTE_PATHS.home}>
             Back home
           </a>
         </aside>
@@ -909,7 +901,7 @@ function LoadingDetailPage({ routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-title">
-        <Topbar activePage="resources" />
+        <Topbar activePage={ROUTE_NAMES.resources} />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">Loading</p>
@@ -928,7 +920,7 @@ function ResourceLoadErrorPage({ loadError, onRetry, routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-error-title">
-        <Topbar activePage="resources" />
+        <Topbar activePage={ROUTE_NAMES.resources} />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">Error</p>
@@ -942,7 +934,7 @@ function ResourceLoadErrorPage({ loadError, onRetry, routeId }) {
             <button className="reset-button" type="button" onClick={onRetry}>
               Try again
             </button>
-            <a className="home-link" href="/resources">
+            <a className="home-link" href={ROUTE_PATHS.resources}>
               Back to resources
             </a>
           </div>
@@ -956,7 +948,7 @@ function NotFoundPage() {
   return (
     <>
       <section className="not-found-page" aria-labelledby="not-found-title">
-        <Topbar activePage="none" />
+        <Topbar activePage={ROUTE_NAMES.notFound} />
         <div className="not-found-card">
           <p className="eyebrow">404</p>
           <h1 id="not-found-title">Page not found.</h1>
@@ -964,10 +956,10 @@ function NotFoundPage() {
             The page you tried to open does not exist in this resource browser.
           </p>
           <div className="not-found-actions">
-            <a className="home-link" href="/resources">
+            <a className="home-link" href={ROUTE_PATHS.resources}>
               View resources
             </a>
-            <a className="home-link" href="/">
+            <a className="home-link" href={ROUTE_PATHS.home}>
               Go home
             </a>
           </div>
