@@ -5,6 +5,8 @@ import './App.css'
 const categories = ['All', 'React', 'CSS', 'JavaScript', 'Tools']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Quick Start']
 const DEV_API_URL = 'https://dev.to/api/articles?tag=webdev&per_page=12'
+const CREATE_RESOURCE_URL = 'https://jsonplaceholder.typicode.com/posts'
+const CREATED_RESOURCES_KEY = 'mini-resource-browser-created-resources'
 const sortOptions = [
   { label: 'Title A-Z', value: 'title' },
   { label: 'Category', value: 'category' },
@@ -86,6 +88,27 @@ const starterResources = [
   },
 ]
 
+function readCreatedResources() {
+  try {
+    return JSON.parse(localStorage.getItem(CREATED_RESOURCES_KEY)) ?? []
+  } catch {
+    return []
+  }
+}
+
+function saveCreatedResources(resources) {
+  localStorage.setItem(CREATED_RESOURCES_KEY, JSON.stringify(resources))
+}
+
+function getCreatedResourceId(title, responseId) {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+  return `created-${responseId}-${slug || Date.now()}`
+}
+
 function pickCategory(tags) {
   if (tags.includes('react')) {
     return 'React'
@@ -138,6 +161,10 @@ function getRouteFromLocation() {
     return { name: 'resources' }
   }
 
+  if (path === '/resources/new') {
+    return { name: 'create' }
+  }
+
   if (path.startsWith('/resources/')) {
     const id = decodeURIComponent(path.replace('/resources/', ''))
     return { name: 'detail', id }
@@ -148,7 +175,8 @@ function getRouteFromLocation() {
 
 function App() {
   const [route, setRoute] = useState(getRouteFromLocation)
-  const [resources, setResources] = useState([])
+  const [baseResources, setBaseResources] = useState([])
+  const [createdResources, setCreatedResources] = useState(readCreatedResources)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
@@ -177,9 +205,9 @@ function App() {
         throw new Error('The API returned no resources.')
       }
 
-      setResources([...apiResources, ...starterResources])
+      setBaseResources([...apiResources, ...starterResources])
     } catch {
-      setResources(starterResources)
+      setBaseResources(starterResources)
       setLoadError('Live resources unavailable. Showing starter resources.')
     } finally {
       setIsLoading(false)
@@ -191,6 +219,40 @@ function App() {
 
     return () => window.clearTimeout(requestId)
   }, [loadResources])
+
+  const resources = useMemo(
+    () => [...createdResources, ...baseResources],
+    [baseResources, createdResources],
+  )
+
+  const createResource = async (formData) => {
+    const postPayload = {
+      title: formData.title,
+      body: formData.summary,
+      userId: 1,
+    }
+    const response = await axios.post(CREATE_RESOURCE_URL, postPayload)
+    const createdResource = {
+      id: getCreatedResourceId(formData.title, response.data.id ?? Date.now()),
+      title: formData.title,
+      category: formData.category,
+      type: formData.type,
+      level: formData.level,
+      readTime: `${formData.readTime} min`,
+      summary: formData.summary,
+      details: formData.details,
+      outcomes: formData.outcomes
+        .split(',')
+        .map((outcome) => outcome.trim())
+        .filter(Boolean),
+    }
+    const nextCreatedResources = [createdResource, ...createdResources]
+
+    setCreatedResources(nextCreatedResources)
+    saveCreatedResources(nextCreatedResources)
+    window.history.pushState({}, '', '/resources')
+    setRoute(getRouteFromLocation())
+  }
 
   const homeResources = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -262,7 +324,9 @@ function App() {
 
   return (
     <main className="app-shell">
-      {route.name === 'resources' ? (
+      {route.name === 'create' ? (
+        <CreateResourcePage onCreateResource={createResource} />
+      ) : route.name === 'resources' ? (
         <ResourceListPage
           activeCategory={activeCategory}
           activeLevel={activeLevel}
@@ -324,6 +388,9 @@ function Topbar({ activePage }) {
           href="/resources"
         >
           Resources
+        </a>
+        <a className={activePage === 'create' ? 'active' : ''} href="/resources/new">
+          Create
         </a>
         <a href="/#collections">Collections</a>
       </div>
@@ -569,9 +636,14 @@ function ResourceListPage({
               <p className="eyebrow">Results</p>
               <h2>{visibleResources.length} resources found</h2>
             </div>
-            <a className="home-link" href="/">
-              Back home
-            </a>
+            <div className="toolbar-actions">
+              <a className="home-link" href="/resources/new">
+                Create resource
+              </a>
+              <a className="home-link" href="/">
+                Back home
+              </a>
+            </div>
           </div>
 
           {isLoading ? (
@@ -608,6 +680,175 @@ function ResourceListPage({
             </div>
           )}
         </div>
+      </section>
+    </>
+  )
+}
+
+function CreateResourcePage({ onCreateResource }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'React',
+    type: 'Article',
+    level: 'Beginner',
+    readTime: '10',
+    summary: '',
+    details: '',
+    outcomes: '',
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+
+  const updateField = (field, value) => {
+    setFormData((currentData) => ({ ...currentData, [field]: value }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
+    try {
+      setIsSubmitting(true)
+      setSubmitError('')
+      await onCreateResource(formData)
+    } catch {
+      setSubmitError('Could not create the resource. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <section className="list-hero" aria-labelledby="create-resource-title">
+        <Topbar activePage="create" />
+        <div className="list-hero-copy">
+          <p className="eyebrow">Create resource</p>
+          <h1 id="create-resource-title">Add a learning resource.</h1>
+          <p className="hero-lede">
+            Submit a resource through a POST request, then add it to the local
+            browser list.
+          </p>
+        </div>
+      </section>
+
+      <section className="create-page" aria-label="Create resource form">
+        <form className="create-form" onSubmit={handleSubmit}>
+          <label htmlFor="resource-title">
+            Title
+            <input
+              id="resource-title"
+              required
+              value={formData.title}
+              onChange={(event) => updateField('title', event.target.value)}
+              placeholder="React form patterns"
+            />
+          </label>
+
+          <div className="form-grid">
+            <label htmlFor="resource-category">
+              Category
+              <select
+                id="resource-category"
+                value={formData.category}
+                onChange={(event) => updateField('category', event.target.value)}
+              >
+                {categories.filter((category) => category !== 'All').map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label htmlFor="resource-level">
+              Level
+              <select
+                id="resource-level"
+                value={formData.level}
+                onChange={(event) => updateField('level', event.target.value)}
+              >
+                {levels.filter((level) => level !== 'All').map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label htmlFor="resource-type">
+              Type
+              <input
+                id="resource-type"
+                required
+                value={formData.type}
+                onChange={(event) => updateField('type', event.target.value)}
+                placeholder="Article"
+              />
+            </label>
+
+            <label htmlFor="resource-read-time">
+              Reading time
+              <input
+                id="resource-read-time"
+                min="1"
+                required
+                type="number"
+                value={formData.readTime}
+                onChange={(event) => updateField('readTime', event.target.value)}
+              />
+            </label>
+          </div>
+
+          <label htmlFor="resource-summary">
+            Summary
+            <textarea
+              id="resource-summary"
+              required
+              rows="3"
+              value={formData.summary}
+              onChange={(event) => updateField('summary', event.target.value)}
+              placeholder="A short description of the resource."
+            ></textarea>
+          </label>
+
+          <label htmlFor="resource-details">
+            Details
+            <textarea
+              id="resource-details"
+              required
+              rows="5"
+              value={formData.details}
+              onChange={(event) => updateField('details', event.target.value)}
+              placeholder="What should someone learn from this?"
+            ></textarea>
+          </label>
+
+          <label htmlFor="resource-outcomes">
+            Outcomes
+            <input
+              id="resource-outcomes"
+              required
+              value={formData.outcomes}
+              onChange={(event) => updateField('outcomes', event.target.value)}
+              placeholder="Build forms, validate input, handle submit"
+            />
+          </label>
+
+          {submitError && (
+            <div className="resource-status warning" role="alert">
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button className="detail-link" disabled={isSubmitting} type="submit">
+              {isSubmitting ? 'Creating...' : 'Create resource'}
+            </button>
+            <a className="home-link" href="/resources">
+              Cancel
+            </a>
+          </div>
+        </form>
       </section>
     </>
   )
