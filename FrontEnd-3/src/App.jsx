@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
@@ -148,7 +148,7 @@ function getRouteFromLocation() {
 
 function App() {
   const [route, setRoute] = useState(getRouteFromLocation)
-  const [resources, setResources] = useState(starterResources)
+  const [resources, setResources] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
@@ -163,39 +163,34 @@ function App() {
     return () => window.removeEventListener('popstate', handleRouteChange)
   }, [])
 
-  useEffect(() => {
-    let shouldIgnore = false
+  const loadResources = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setLoadError('')
 
-    async function loadResources() {
-      try {
-        setIsLoading(true)
-        const response = await axios.get(DEV_API_URL)
-        const apiResources = response.data
-          .filter((article) => article.title && article.id)
-          .map(mapArticleToResource)
+      const response = await axios.get(DEV_API_URL)
+      const apiResources = response.data
+        .filter((article) => article.title && article.id)
+        .map(mapArticleToResource)
 
-        if (!shouldIgnore && apiResources.length > 0) {
-          setResources([...apiResources, ...starterResources])
-          setLoadError('')
-        }
-      } catch {
-        if (!shouldIgnore) {
-          setResources(starterResources)
-          setLoadError('Live resources unavailable. Showing starter resources.')
-        }
-      } finally {
-        if (!shouldIgnore) {
-          setIsLoading(false)
-        }
+      if (apiResources.length === 0) {
+        throw new Error('The API returned no resources.')
       }
-    }
 
-    loadResources()
-
-    return () => {
-      shouldIgnore = true
+      setResources([...apiResources, ...starterResources])
+    } catch {
+      setResources(starterResources)
+      setLoadError('Live resources unavailable. Showing starter resources.')
+    } finally {
+      setIsLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    const requestId = window.setTimeout(loadResources, 0)
+
+    return () => window.clearTimeout(requestId)
+  }, [loadResources])
 
   const homeResources = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -273,6 +268,7 @@ function App() {
           activeLevel={activeLevel}
           isLoading={isLoading}
           loadError={loadError}
+          onRetry={loadResources}
           query={query}
           resetFilters={resetFilters}
           setActiveCategory={setActiveCategory}
@@ -286,6 +282,12 @@ function App() {
         <ResourceDetailPage resource={selectedResource} routeId={route.id} />
       ) : route.name === 'detail' && isLoading ? (
         <LoadingDetailPage routeId={route.id} />
+      ) : route.name === 'detail' && loadError ? (
+        <ResourceLoadErrorPage
+          loadError={loadError}
+          onRetry={loadResources}
+          routeId={route.id}
+        />
       ) : route.name === 'detail' ? (
         <NotFoundPage />
       ) : route.name === 'notFound' ? (
@@ -295,6 +297,7 @@ function App() {
           activeCategory={activeCategory}
           isLoading={isLoading}
           loadError={loadError}
+          onRetry={loadResources}
           query={query}
           setActiveCategory={setActiveCategory}
           setQuery={setQuery}
@@ -369,6 +372,7 @@ function HomePage({
   activeCategory,
   isLoading,
   loadError,
+  onRetry,
   query,
   setActiveCategory,
   setQuery,
@@ -397,7 +401,11 @@ function HomePage({
               activeCategory={activeCategory}
               setActiveCategory={setActiveCategory}
             />
-            <ResourceStatus isLoading={isLoading} loadError={loadError} />
+            <ResourceStatus
+              isLoading={isLoading}
+              loadError={loadError}
+              onRetry={onRetry}
+            />
           </form>
         </div>
       </section>
@@ -423,30 +431,31 @@ function HomePage({
           <h2>Featured resources</h2>
         </div>
 
-        <div className="resource-grid">
-          {visibleResources.map((resource) => (
-            <article className="resource-card" key={resource.title}>
-              <div className="card-topline">
-                <span>{resource.category}</span>
-                <span>{resource.readTime}</span>
-              </div>
-              <h3>{resource.title}</h3>
-              <p>{resource.summary}</p>
-              <div className="card-footer">
-                <span>{resource.type}</span>
-                <span>{resource.level}</span>
-              </div>
-              <a
-                className="detail-link"
-                href={`/resources/${resource.id}`}
-              >
-                View details
-              </a>
-            </article>
-          ))}
-        </div>
+        {isLoading ? (
+          <LoadingCards />
+        ) : (
+          <div className="resource-grid">
+            {visibleResources.map((resource) => (
+              <article className="resource-card" key={resource.title}>
+                <div className="card-topline">
+                  <span>{resource.category}</span>
+                  <span>{resource.readTime}</span>
+                </div>
+                <h3>{resource.title}</h3>
+                <p>{resource.summary}</p>
+                <div className="card-footer">
+                  <span>{resource.type}</span>
+                  <span>{resource.level}</span>
+                </div>
+                <a className="detail-link" href={`/resources/${resource.id}`}>
+                  View details
+                </a>
+              </article>
+            ))}
+          </div>
+        )}
 
-        {visibleResources.length === 0 && (
+        {!isLoading && visibleResources.length === 0 && (
           <div className="empty-state">
             <h3>No resources found</h3>
             <p>Try a different search term or choose another category.</p>
@@ -474,6 +483,7 @@ function ResourceListPage({
   activeLevel,
   isLoading,
   loadError,
+  onRetry,
   query,
   resetFilters,
   setActiveCategory,
@@ -504,7 +514,11 @@ function ResourceListPage({
             <SearchBox query={query} setQuery={setQuery} />
           </form>
 
-          <ResourceStatus isLoading={isLoading} loadError={loadError} />
+          <ResourceStatus
+            isLoading={isLoading}
+            loadError={loadError}
+            onRetry={onRetry}
+          />
 
           <div className="filter-group">
             <p>Category</p>
@@ -560,7 +574,9 @@ function ResourceListPage({
             </a>
           </div>
 
-          {visibleResources.length > 0 ? (
+          {isLoading ? (
+            <LoadingRows />
+          ) : visibleResources.length > 0 ? (
             <div className="resource-list">
               {visibleResources.map((resource) => (
                 <article className="resource-row" key={resource.title}>
@@ -594,6 +610,42 @@ function ResourceListPage({
         </div>
       </section>
     </>
+  )
+}
+
+function LoadingCards() {
+  return (
+    <div className="resource-grid" aria-label="Loading resources">
+      {Array.from({ length: 6 }, (_, index) => (
+        <article className="resource-card skeleton-card" key={index}>
+          <span className="skeleton-pill"></span>
+          <span className="skeleton-line title"></span>
+          <span className="skeleton-line"></span>
+          <span className="skeleton-line short"></span>
+          <span className="skeleton-button"></span>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function LoadingRows() {
+  return (
+    <div className="resource-list" aria-label="Loading resources">
+      {Array.from({ length: 5 }, (_, index) => (
+        <article className="resource-row skeleton-row" key={index}>
+          <div className="resource-row-main">
+            <span className="skeleton-pill"></span>
+            <span className="skeleton-line title"></span>
+            <span className="skeleton-line"></span>
+          </div>
+          <div className="resource-row-meta">
+            <span className="skeleton-pill"></span>
+            <span className="skeleton-pill"></span>
+          </div>
+        </article>
+      ))}
+    </div>
   )
 }
 
@@ -674,6 +726,34 @@ function LoadingDetailPage({ routeId }) {
   )
 }
 
+function ResourceLoadErrorPage({ loadError, onRetry, routeId }) {
+  return (
+    <>
+      <section className="detail-hero" aria-labelledby="detail-error-title">
+        <Topbar activePage="resources" />
+        <div className="detail-hero-grid">
+          <div>
+            <p className="eyebrow">Error</p>
+            <h1 id="detail-error-title">Could not load this resource.</h1>
+            <p className="hero-lede">{loadError}</p>
+            <p className="route-id">
+              Route id: <code>{routeId}</code>
+            </p>
+          </div>
+          <div className="detail-actions" aria-label="Resource actions">
+            <button className="reset-button" type="button" onClick={onRetry}>
+              Try again
+            </button>
+            <a className="home-link" href="/resources">
+              Back to resources
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
+
 function NotFoundPage() {
   return (
     <>
@@ -699,16 +779,31 @@ function NotFoundPage() {
   )
 }
 
-function ResourceStatus({ isLoading, loadError }) {
+function ResourceStatus({ isLoading, loadError, onRetry }) {
   if (isLoading) {
-    return <p className="resource-status">Loading live DEV resources...</p>
+    return (
+      <div className="resource-status" role="status">
+        Loading live DEV resources...
+      </div>
+    )
   }
 
   if (loadError) {
-    return <p className="resource-status warning">{loadError}</p>
+    return (
+      <div className="resource-status warning" role="alert">
+        <span>{loadError}</span>
+        <button type="button" onClick={onRetry}>
+          Retry
+        </button>
+      </div>
+    )
   }
 
-  return <p className="resource-status">Live resources loaded from DEV.</p>
+  return (
+    <div className="resource-status success" role="status">
+      Live resources loaded from DEV.
+    </div>
+  )
 }
 
 export default App
