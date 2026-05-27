@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Link,
+  NavLink,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+import AppRouter from './routes/AppRouter'
+import {
   createResourcePost,
   fetchWebDevResources,
 } from './services/resourceApi'
 import {
   getResourceDetailPath,
-  getRouteFromLocation,
-  navigateTo,
-  ROUTE_NAMES,
   ROUTE_PATHS,
 } from './routes/resourceRoutes'
 import './App.css'
@@ -118,7 +123,6 @@ function getCreatedResourceId(title, responseId) {
 }
 
 function App() {
-  const [route, setRoute] = useState(getRouteFromLocation)
   const [baseResources, setBaseResources] = useState([])
   const [createdResources, setCreatedResources] = useState(readCreatedResources)
   const [isLoading, setIsLoading] = useState(true)
@@ -127,13 +131,6 @@ function App() {
   const [activeLevel, setActiveLevel] = useState('All')
   const [sortBy, setSortBy] = useState('title')
   const [query, setQuery] = useState('')
-
-  useEffect(() => {
-    const handleRouteChange = () => setRoute(getRouteFromLocation())
-
-    window.addEventListener('popstate', handleRouteChange)
-    return () => window.removeEventListener('popstate', handleRouteChange)
-  }, [])
 
   const loadResources = useCallback(async () => {
     try {
@@ -191,7 +188,7 @@ function App() {
 
     setCreatedResources(nextCreatedResources)
     saveCreatedResources(nextCreatedResources)
-    setRoute(navigateTo(ROUTE_PATHS.resources))
+    return createdResource
   }
 
   const homeResources = useMemo(() => {
@@ -258,87 +255,110 @@ function App() {
     setSortBy('title')
   }
 
-  const selectedResource = resources.find(
-    (resource) => resource.id === route.id,
-  )
-
   return (
     <main className="app-shell">
-      {route.name === ROUTE_NAMES.create ? (
-        <CreateResourcePage onCreateResource={createResource} />
-      ) : route.name === ROUTE_NAMES.resources ? (
-        <ResourceListPage
-          activeCategory={activeCategory}
-          activeLevel={activeLevel}
-          isLoading={isLoading}
-          loadError={loadError}
-          onRetry={loadResources}
-          query={query}
-          resetFilters={resetFilters}
-          setActiveCategory={setActiveCategory}
-          setActiveLevel={setActiveLevel}
-          setQuery={setQuery}
-          setSortBy={setSortBy}
-          sortBy={sortBy}
-          visibleResources={listResources}
-        />
-      ) : route.name === ROUTE_NAMES.detail && selectedResource ? (
-        <ResourceDetailPage resource={selectedResource} routeId={route.id} />
-      ) : route.name === ROUTE_NAMES.detail && isLoading ? (
-        <LoadingDetailPage routeId={route.id} />
-      ) : route.name === ROUTE_NAMES.detail && loadError ? (
-        <ResourceLoadErrorPage
-          loadError={loadError}
-          onRetry={loadResources}
-          routeId={route.id}
-        />
-      ) : route.name === ROUTE_NAMES.detail ? (
-        <NotFoundPage />
-      ) : route.name === ROUTE_NAMES.notFound ? (
-        <NotFoundPage />
-      ) : (
-        <HomePage
-          activeCategory={activeCategory}
-          isLoading={isLoading}
-          loadError={loadError}
-          onRetry={loadResources}
-          query={query}
-          setActiveCategory={setActiveCategory}
-          setQuery={setQuery}
-          totalResources={resources.length}
-          visibleResources={homeResources}
-        />
-      )}
+      <AppRouter
+        createElement={<CreateResourcePage onCreateResource={createResource} />}
+        detailElement={
+          <ResourceDetailRoute
+            isLoading={isLoading}
+            loadError={loadError}
+            onRetry={loadResources}
+            resources={resources}
+          />
+        }
+        homeElement={
+          <HomePage
+            activeCategory={activeCategory}
+            isLoading={isLoading}
+            loadError={loadError}
+            onRetry={loadResources}
+            query={query}
+            setActiveCategory={setActiveCategory}
+            setQuery={setQuery}
+            totalResources={resources.length}
+            visibleResources={homeResources}
+          />
+        }
+        notFoundElement={<NotFoundPage />}
+        resourcesElement={
+          <ResourceListPage
+            activeCategory={activeCategory}
+            activeLevel={activeLevel}
+            isLoading={isLoading}
+            loadError={loadError}
+            onRetry={loadResources}
+            query={query}
+            resetFilters={resetFilters}
+            setActiveCategory={setActiveCategory}
+            setActiveLevel={setActiveLevel}
+            setQuery={setQuery}
+            setSortBy={setSortBy}
+            sortBy={sortBy}
+            visibleResources={listResources}
+          />
+        }
+      />
     </main>
   )
 }
 
-function Topbar({ activePage }) {
+function ResourceDetailRoute({ isLoading, loadError, onRetry, resources }) {
+  const { id } = useParams()
+  const selectedResource = resources.find((resource) => resource.id === id)
+
+  if (selectedResource) {
+    return <ResourceDetailPage resource={selectedResource} routeId={id} />
+  }
+
+  if (isLoading) {
+    return <LoadingDetailPage routeId={id} />
+  }
+
+  if (loadError) {
+    return (
+      <ResourceLoadErrorPage
+        loadError={loadError}
+        onRetry={onRetry}
+        routeId={id}
+      />
+    )
+  }
+
+  return <NotFoundPage />
+}
+
+function Topbar() {
+  const location = useLocation()
+
   return (
     <nav className="topbar" aria-label="Primary navigation">
-      <a className="brand" href={ROUTE_PATHS.home}>
+      <Link className="brand" to={ROUTE_PATHS.home}>
         Resource Browser
-      </a>
+      </Link>
       <div className="nav-actions">
-        <a
-          className={activePage === ROUTE_NAMES.home ? 'active' : ''}
-          href={ROUTE_PATHS.home}
+        <NavLink
+          className={({ isActive }) => (isActive ? 'active' : '')}
+          end
+          to={ROUTE_PATHS.home}
         >
           Home
-        </a>
-        <a
-          className={activePage === ROUTE_NAMES.resources ? 'active' : ''}
-          href={ROUTE_PATHS.resources}
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            isActive && location.pathname !== ROUTE_PATHS.create ? 'active' : ''
+          }
+          to={ROUTE_PATHS.resources}
         >
           Resources
-        </a>
-        <a
-          className={activePage === ROUTE_NAMES.create ? 'active' : ''}
-          href={ROUTE_PATHS.create}
+        </NavLink>
+        <NavLink
+          className={({ isActive }) => (isActive ? 'active' : '')}
+          to={ROUTE_PATHS.create}
         >
           Create
-        </a>
-        <a href={ROUTE_PATHS.collections}>Collections</a>
+        </NavLink>
+        <Link to={ROUTE_PATHS.collections}>Collections</Link>
       </div>
     </nav>
   )
@@ -395,7 +415,7 @@ function HomePage({
   return (
     <>
       <section className="home-hero" aria-labelledby="page-title">
-        <Topbar activePage={ROUTE_NAMES.home} />
+        <Topbar />
 
         <div className="hero-grid">
           <div className="hero-copy">
@@ -460,12 +480,12 @@ function HomePage({
                   <span>{resource.type}</span>
                   <span>{resource.level}</span>
                 </div>
-                <a
+                <Link
                   className="detail-link"
-                  href={getResourceDetailPath(resource.id)}
+                  to={getResourceDetailPath(resource.id)}
                 >
                   View details
-                </a>
+                </Link>
               </article>
             ))}
           </div>
@@ -512,7 +532,7 @@ function ResourceListPage({
   return (
     <>
       <section className="list-hero" aria-labelledby="resource-list-title">
-        <Topbar activePage={ROUTE_NAMES.resources} />
+        <Topbar />
         <div className="list-hero-copy">
           <p className="eyebrow">Resource list</p>
           <h1 id="resource-list-title">Browse every learning resource.</h1>
@@ -586,12 +606,12 @@ function ResourceListPage({
               <h2>{visibleResources.length} resources found</h2>
             </div>
             <div className="toolbar-actions">
-              <a className="home-link" href={ROUTE_PATHS.create}>
+              <Link className="home-link" to={ROUTE_PATHS.create}>
                 Create resource
-              </a>
-              <a className="home-link" href={ROUTE_PATHS.home}>
+              </Link>
+              <Link className="home-link" to={ROUTE_PATHS.home}>
                 Back home
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -612,12 +632,12 @@ function ResourceListPage({
                   <div className="resource-row-meta">
                     <span>{resource.type}</span>
                     <span>{resource.level}</span>
-                    <a
+                    <Link
                       className="detail-link compact"
-                      href={getResourceDetailPath(resource.id)}
+                      to={getResourceDetailPath(resource.id)}
                     >
                       Details
-                    </a>
+                    </Link>
                   </div>
                 </article>
               ))}
@@ -635,6 +655,7 @@ function ResourceListPage({
 }
 
 function CreateResourcePage({ onCreateResource }) {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     title: '',
     category: 'React',
@@ -659,6 +680,7 @@ function CreateResourcePage({ onCreateResource }) {
       setIsSubmitting(true)
       setSubmitError('')
       await onCreateResource(formData)
+      navigate(ROUTE_PATHS.resources)
     } catch {
       setSubmitError('Could not create the resource. Please try again.')
     } finally {
@@ -669,7 +691,7 @@ function CreateResourcePage({ onCreateResource }) {
   return (
     <>
       <section className="list-hero" aria-labelledby="create-resource-title">
-        <Topbar activePage={ROUTE_NAMES.create} />
+        <Topbar />
         <div className="list-hero-copy">
           <p className="eyebrow">Create resource</p>
           <h1 id="create-resource-title">Add a learning resource.</h1>
@@ -793,9 +815,9 @@ function CreateResourcePage({ onCreateResource }) {
             <button className="detail-link" disabled={isSubmitting} type="submit">
               {isSubmitting ? 'Creating...' : 'Create resource'}
             </button>
-            <a className="home-link" href={ROUTE_PATHS.resources}>
+            <Link className="home-link" to={ROUTE_PATHS.resources}>
               Cancel
-            </a>
+            </Link>
           </div>
         </form>
       </section>
@@ -843,7 +865,7 @@ function ResourceDetailPage({ resource, routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-title">
-        <Topbar activePage={ROUTE_NAMES.resources} />
+        <Topbar />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">{resource.category}</p>
@@ -885,12 +907,12 @@ function ResourceDetailPage({ resource, routeId }) {
               Open article
             </a>
           )}
-          <a className="home-link" href={ROUTE_PATHS.resources}>
+          <Link className="home-link" to={ROUTE_PATHS.resources}>
             Back to resources
-          </a>
-          <a className="home-link" href={ROUTE_PATHS.home}>
+          </Link>
+          <Link className="home-link" to={ROUTE_PATHS.home}>
             Back home
-          </a>
+          </Link>
         </aside>
       </section>
     </>
@@ -901,7 +923,7 @@ function LoadingDetailPage({ routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-title">
-        <Topbar activePage={ROUTE_NAMES.resources} />
+        <Topbar />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">Loading</p>
@@ -920,7 +942,7 @@ function ResourceLoadErrorPage({ loadError, onRetry, routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-error-title">
-        <Topbar activePage={ROUTE_NAMES.resources} />
+        <Topbar />
         <div className="detail-hero-grid">
           <div>
             <p className="eyebrow">Error</p>
@@ -934,9 +956,9 @@ function ResourceLoadErrorPage({ loadError, onRetry, routeId }) {
             <button className="reset-button" type="button" onClick={onRetry}>
               Try again
             </button>
-            <a className="home-link" href={ROUTE_PATHS.resources}>
+            <Link className="home-link" to={ROUTE_PATHS.resources}>
               Back to resources
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -948,7 +970,7 @@ function NotFoundPage() {
   return (
     <>
       <section className="not-found-page" aria-labelledby="not-found-title">
-        <Topbar activePage={ROUTE_NAMES.notFound} />
+        <Topbar />
         <div className="not-found-card">
           <p className="eyebrow">404</p>
           <h1 id="not-found-title">Page not found.</h1>
@@ -956,12 +978,12 @@ function NotFoundPage() {
             The page you tried to open does not exist in this resource browser.
           </p>
           <div className="not-found-actions">
-            <a className="home-link" href={ROUTE_PATHS.resources}>
+            <Link className="home-link" to={ROUTE_PATHS.resources}>
               View resources
-            </a>
-            <a className="home-link" href={ROUTE_PATHS.home}>
+            </Link>
+            <Link className="home-link" to={ROUTE_PATHS.home}>
               Go home
-            </a>
+            </Link>
           </div>
         </div>
       </section>
