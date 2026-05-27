@@ -112,6 +112,23 @@ h3 {
   max-width: 660px;
 }
 
+.route-id {
+  color: var(--muted-color);
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 18px 0 0;
+}
+
+.route-id code {
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--heading-color);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+}
+
 .search-panel {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border);
@@ -126,6 +143,17 @@ h3 {
   font-size: 0.86rem;
   font-weight: 800;
   margin-bottom: 10px;
+}
+
+.resource-status {
+  color: var(--muted-color);
+  font-size: 0.84rem;
+  font-weight: 800;
+  margin: 14px 0 0;
+}
+
+.resource-status.warning {
+  color: #9f4b32;
 }
 
 .search-row {

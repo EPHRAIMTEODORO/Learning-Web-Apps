@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import './App.css'
 
 const categories = ['All', 'React', 'CSS', 'JavaScript', 'Tools']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Quick Start']
+const DEV_API_URL = 'https://dev.to/api/articles?tag=webdev&per_page=12'
 const sortOptions = [
   { label: 'Title A-Z', value: 'title' },
   { label: 'Category', value: 'category' },
   { label: 'Reading time', value: 'readTime' },
 ]
 
-const resources = [
+const starterResources = [
   {
+    id: 'react-state-patterns',
     title: 'React State Patterns',
     category: 'React',
     type: 'Guide',
@@ -22,6 +25,7 @@ const resources = [
     outcomes: ['Identify derived state', 'Choose state ownership', 'Simplify props'],
   },
   {
+    id: 'responsive-layout-recipes',
     title: 'Responsive Layout Recipes',
     category: 'CSS',
     type: 'Reference',
@@ -33,6 +37,7 @@ const resources = [
     outcomes: ['Build fluid grids', 'Control spacing', 'Prevent overflow'],
   },
   {
+    id: 'array-method-practice',
     title: 'Array Method Practice',
     category: 'JavaScript',
     type: 'Exercise',
@@ -44,6 +49,7 @@ const resources = [
     outcomes: ['Transform arrays', 'Filter datasets', 'Sort visible results'],
   },
   {
+    id: 'vite-project-checklist',
     title: 'Vite Project Checklist',
     category: 'Tools',
     type: 'Checklist',
@@ -55,6 +61,7 @@ const resources = [
     outcomes: ['Check scripts', 'Organize assets', 'Verify builds'],
   },
   {
+    id: 'component-composition',
     title: 'Component Composition',
     category: 'React',
     type: 'Article',
@@ -66,6 +73,7 @@ const resources = [
     outcomes: ['Split UI concerns', 'Reuse layout', 'Pass clear props'],
   },
   {
+    id: 'form-validation-basics',
     title: 'Form Validation Basics',
     category: 'JavaScript',
     type: 'Tutorial',
@@ -78,48 +86,115 @@ const resources = [
   },
 ]
 
-function getResourceSlug(resource) {
-  return resource.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+function pickCategory(tags) {
+  if (tags.includes('react')) {
+    return 'React'
+  }
+
+  if (tags.includes('css')) {
+    return 'CSS'
+  }
+
+  if (tags.includes('javascript') || tags.includes('js')) {
+    return 'JavaScript'
+  }
+
+  return 'Tools'
 }
 
-function getRouteFromHash() {
-  const hash = window.location.hash
+function mapArticleToResource(article) {
+  const tags = article.tag_list ?? []
+  const readableTags = tags.slice(0, 3)
 
-  if (!hash || hash === '#/' || hash === '#collections') {
+  return {
+    id: String(article.id),
+    title: article.title,
+    category: pickCategory(tags),
+    type: 'Article',
+    level: 'Beginner',
+    readTime: `${article.reading_time_minutes || 5} min`,
+    summary:
+      article.description ||
+      'A web development resource from the DEV Community API.',
+    details:
+      article.description ||
+      'This resource was loaded from the DEV Community public articles API.',
+    outcomes:
+      readableTags.length > 0
+        ? readableTags.map((tag) => `Explore ${tag}`)
+        : ['Read the article', 'Review the concept', 'Apply the idea'],
+    url: article.url,
+  }
+}
+
+function getRouteFromLocation() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+
+  if (path === '/') {
     return { name: 'home' }
   }
 
-  if (hash === '#/resources') {
+  if (path === '/resources') {
     return { name: 'resources' }
   }
 
-  if (hash.startsWith('#/resources/')) {
-    const slug = hash.replace('#/resources/', '')
-    const hasResource = resources.some(
-      (resource) => getResourceSlug(resource) === slug,
-    )
-
-    return hasResource ? { name: 'detail', slug } : { name: 'notFound' }
+  if (path.startsWith('/resources/')) {
+    const id = decodeURIComponent(path.replace('/resources/', ''))
+    return { name: 'detail', id }
   }
 
   return { name: 'notFound' }
 }
 
 function App() {
-  const [route, setRoute] = useState(getRouteFromHash)
+  const [route, setRoute] = useState(getRouteFromLocation)
+  const [resources, setResources] = useState(starterResources)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [activeLevel, setActiveLevel] = useState('All')
   const [sortBy, setSortBy] = useState('title')
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    const handleHashChange = () => setRoute(getRouteFromHash())
+    const handleRouteChange = () => setRoute(getRouteFromLocation())
 
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
+    window.addEventListener('popstate', handleRouteChange)
+    return () => window.removeEventListener('popstate', handleRouteChange)
+  }, [])
+
+  useEffect(() => {
+    let shouldIgnore = false
+
+    async function loadResources() {
+      try {
+        setIsLoading(true)
+        const response = await axios.get(DEV_API_URL)
+        const apiResources = response.data
+          .filter((article) => article.title && article.id)
+          .map(mapArticleToResource)
+
+        if (!shouldIgnore && apiResources.length > 0) {
+          setResources([...apiResources, ...starterResources])
+          setLoadError('')
+        }
+      } catch {
+        if (!shouldIgnore) {
+          setResources(starterResources)
+          setLoadError('Live resources unavailable. Showing starter resources.')
+        }
+      } finally {
+        if (!shouldIgnore) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadResources()
+
+    return () => {
+      shouldIgnore = true
+    }
   }, [])
 
   const homeResources = useMemo(() => {
@@ -140,7 +215,7 @@ function App() {
 
       return matchesCategory && searchableText.includes(normalizedQuery)
     })
-  }, [activeCategory, query])
+  }, [activeCategory, query, resources])
 
   const listResources = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -177,7 +252,7 @@ function App() {
 
         return firstResource[sortBy].localeCompare(secondResource[sortBy])
       })
-  }, [activeCategory, activeLevel, query, sortBy])
+  }, [activeCategory, activeLevel, query, resources, sortBy])
 
   const resetFilters = () => {
     setActiveCategory('All')
@@ -187,7 +262,7 @@ function App() {
   }
 
   const selectedResource = resources.find(
-    (resource) => getResourceSlug(resource) === route.slug,
+    (resource) => resource.id === route.id,
   )
 
   return (
@@ -196,6 +271,8 @@ function App() {
         <ResourceListPage
           activeCategory={activeCategory}
           activeLevel={activeLevel}
+          isLoading={isLoading}
+          loadError={loadError}
           query={query}
           resetFilters={resetFilters}
           setActiveCategory={setActiveCategory}
@@ -206,15 +283,22 @@ function App() {
           visibleResources={listResources}
         />
       ) : route.name === 'detail' && selectedResource ? (
-        <ResourceDetailPage resource={selectedResource} />
+        <ResourceDetailPage resource={selectedResource} routeId={route.id} />
+      ) : route.name === 'detail' && isLoading ? (
+        <LoadingDetailPage routeId={route.id} />
+      ) : route.name === 'detail' ? (
+        <NotFoundPage />
       ) : route.name === 'notFound' ? (
         <NotFoundPage />
       ) : (
         <HomePage
           activeCategory={activeCategory}
+          isLoading={isLoading}
+          loadError={loadError}
           query={query}
           setActiveCategory={setActiveCategory}
           setQuery={setQuery}
+          totalResources={resources.length}
           visibleResources={homeResources}
         />
       )}
@@ -225,20 +309,20 @@ function App() {
 function Topbar({ activePage }) {
   return (
     <nav className="topbar" aria-label="Primary navigation">
-      <a className="brand" href="#/">
+      <a className="brand" href="/">
         Resource Browser
       </a>
       <div className="nav-actions">
-        <a className={activePage === 'home' ? 'active' : ''} href="#/">
+        <a className={activePage === 'home' ? 'active' : ''} href="/">
           Home
         </a>
         <a
           className={activePage === 'resources' ? 'active' : ''}
-          href="#/resources"
+          href="/resources"
         >
           Resources
         </a>
-        <a href="#collections">Collections</a>
+        <a href="/#collections">Collections</a>
       </div>
     </nav>
   )
@@ -283,9 +367,12 @@ function CategoryFilters({ activeCategory, setActiveCategory }) {
 
 function HomePage({
   activeCategory,
+  isLoading,
+  loadError,
   query,
   setActiveCategory,
   setQuery,
+  totalResources,
   visibleResources,
 }) {
   return (
@@ -310,14 +397,15 @@ function HomePage({
               activeCategory={activeCategory}
               setActiveCategory={setActiveCategory}
             />
+            <ResourceStatus isLoading={isLoading} loadError={loadError} />
           </form>
         </div>
       </section>
 
       <section className="stats-band" aria-label="Library summary">
         <div>
-          <strong>{resources.length}</strong>
-          <span>starter resources</span>
+          <strong>{totalResources}</strong>
+          <span>resources loaded</span>
         </div>
         <div>
           <strong>{categories.length - 1}</strong>
@@ -350,7 +438,7 @@ function HomePage({
               </div>
               <a
                 className="detail-link"
-                href={`#/resources/${getResourceSlug(resource)}`}
+                href={`/resources/${resource.id}`}
               >
                 View details
               </a>
@@ -384,6 +472,8 @@ function HomePage({
 function ResourceListPage({
   activeCategory,
   activeLevel,
+  isLoading,
+  loadError,
   query,
   resetFilters,
   setActiveCategory,
@@ -413,6 +503,8 @@ function ResourceListPage({
             <label htmlFor="resource-search">Search resources</label>
             <SearchBox query={query} setQuery={setQuery} />
           </form>
+
+          <ResourceStatus isLoading={isLoading} loadError={loadError} />
 
           <div className="filter-group">
             <p>Category</p>
@@ -463,7 +555,7 @@ function ResourceListPage({
               <p className="eyebrow">Results</p>
               <h2>{visibleResources.length} resources found</h2>
             </div>
-            <a className="home-link" href="#/">
+            <a className="home-link" href="/">
               Back home
             </a>
           </div>
@@ -485,7 +577,7 @@ function ResourceListPage({
                     <span>{resource.level}</span>
                     <a
                       className="detail-link compact"
-                      href={`#/resources/${getResourceSlug(resource)}`}
+                      href={`/resources/${resource.id}`}
                     >
                       Details
                     </a>
@@ -505,7 +597,7 @@ function ResourceListPage({
   )
 }
 
-function ResourceDetailPage({ resource }) {
+function ResourceDetailPage({ resource, routeId }) {
   return (
     <>
       <section className="detail-hero" aria-labelledby="detail-title">
@@ -515,6 +607,9 @@ function ResourceDetailPage({ resource }) {
             <p className="eyebrow">{resource.category}</p>
             <h1 id="detail-title">{resource.title}</h1>
             <p className="hero-lede">{resource.summary}</p>
+            <p className="route-id">
+              Route id: <code>{routeId}</code>
+            </p>
           </div>
           <div className="detail-summary">
             <span>{resource.type}</span>
@@ -538,13 +633,42 @@ function ResourceDetailPage({ resource }) {
         </article>
 
         <aside className="detail-actions" aria-label="Resource actions">
-          <a className="home-link" href="#/resources">
+          {resource.url && (
+            <a
+              className="detail-link"
+              href={resource.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open article
+            </a>
+          )}
+          <a className="home-link" href="/resources">
             Back to resources
           </a>
-          <a className="home-link" href="#/">
+          <a className="home-link" href="/">
             Back home
           </a>
         </aside>
+      </section>
+    </>
+  )
+}
+
+function LoadingDetailPage({ routeId }) {
+  return (
+    <>
+      <section className="detail-hero" aria-labelledby="detail-title">
+        <Topbar activePage="resources" />
+        <div className="detail-hero-grid">
+          <div>
+            <p className="eyebrow">Loading</p>
+            <h1 id="detail-title">Loading resource.</h1>
+            <p className="route-id">
+              Route id: <code>{routeId}</code>
+            </p>
+          </div>
+        </div>
       </section>
     </>
   )
@@ -562,10 +686,10 @@ function NotFoundPage() {
             The page you tried to open does not exist in this resource browser.
           </p>
           <div className="not-found-actions">
-            <a className="home-link" href="#/resources">
+            <a className="home-link" href="/resources">
               View resources
             </a>
-            <a className="home-link" href="#/">
+            <a className="home-link" href="/">
               Go home
             </a>
           </div>
@@ -573,6 +697,18 @@ function NotFoundPage() {
       </section>
     </>
   )
+}
+
+function ResourceStatus({ isLoading, loadError }) {
+  if (isLoading) {
+    return <p className="resource-status">Loading live DEV resources...</p>
+  }
+
+  if (loadError) {
+    return <p className="resource-status warning">{loadError}</p>
+  }
+
+  return <p className="resource-status">Live resources loaded from DEV.</p>
 }
 
 export default App
