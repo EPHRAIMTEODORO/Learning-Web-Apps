@@ -1,47 +1,28 @@
-import { useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import ProtectedRoute from './components/ProtectedRoute'
+import DashboardPage from './pages/DashboardPage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import './App.css'
 
 function App() {
-  const [error, setError] = useState('')
-
-  function handleSubmit(event) {
-    event.preventDefault()
-    setError('Invalid email/username or password.')
-  }
-
   return (
     <>
       <Navbar />
-      <main className="login-page">
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="login-id">Email or username</label>
-          <input
-            id="login-id"
-            name="login-id"
-            type="text"
-            autoComplete="username"
-            required
-          />
-
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-
-          <button type="submit">Submit</button>
-
-          {error && (
-            <p className="login-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
-      </main>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </>
   )
 }
