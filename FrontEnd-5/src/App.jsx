@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import {
+  createDemoJwt,
+  filterResources,
+  getCourseCode,
+  getCredits,
+  getDepartment,
+  getStatusLabel,
+  getUniqueValues,
+  parseList,
+} from './courseCatalog'
 
 const SESSION_STORAGE_KEY = 'course-api-user'
 const ACCOUNT_STORAGE_KEY = 'course-api-accounts'
@@ -15,37 +25,6 @@ const emptyResourceForm = {
   types: '',
   topics: '',
   levels: '',
-}
-
-const base64UrlEncode = (value) => {
-  const stringValue = typeof value === 'string' ? value : JSON.stringify(value)
-  const bytes = new TextEncoder().encode(stringValue)
-  const binaryValue = Array.from(bytes, (byte) =>
-    String.fromCharCode(byte),
-  ).join('')
-
-  return btoa(binaryValue)
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replaceAll('=', '')
-}
-
-const createDemoJwt = (account) => {
-  const header = {
-    alg: 'HS256',
-    typ: 'JWT',
-  }
-  const payload = {
-    sub: account.email,
-    name: account.name,
-    scope: 'codingresources:read',
-    iat: Math.floor(Date.now() / 1000),
-  }
-  const signature = 'course-api-demo-signature'
-
-  return `${base64UrlEncode(header)}.${base64UrlEncode(
-    payload,
-  )}.${base64UrlEncode(signature)}`
 }
 
 const fetchWithAuth = (url, token, options = {}) =>
@@ -128,36 +107,6 @@ const saveSession = (account) => {
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextUser))
   return nextUser
 }
-
-const parseList = (value) =>
-  value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-
-const getCourseCode = (resource) => {
-  if (resource.isLocal) {
-    return `NEW-${String(resource.id).slice(-4)}`
-  }
-
-  return `CC-${String(resource.id).padStart(3, '0')}`
-}
-
-const getPrimaryValue = (values, fallback) =>
-  values?.length ? values[0] : fallback
-
-const getDepartment = (resource) =>
-  getPrimaryValue(resource.topics, 'General Studies')
-
-const getCredits = (resource) =>
-  Math.min(4, Math.max(1, resource.levels?.length || 1)) + 1
-
-const getStatusLabel = (resource) => (resource.isLocal ? 'Draft' : 'Open')
-
-const getUniqueValues = (resources, key) =>
-  Array.from(new Set(resources.flatMap((resource) => resource[key] ?? []))).sort(
-    (firstValue, secondValue) => firstValue.localeCompare(secondValue),
-  )
 
 function App() {
   const [user, setUser] = useState(getStoredUser)
@@ -410,31 +359,17 @@ function Dashboard({ onLogout, user }) {
   const topics = useMemo(() => getUniqueValues(resources, 'topics'), [resources])
   const levels = useMemo(() => getUniqueValues(resources, 'levels'), [resources])
   const types = useMemo(() => getUniqueValues(resources, 'types'), [resources])
-  const filteredResources = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-
-    return resources.filter((resource) => {
-      const searchableText = [
-        getCourseCode(resource),
-        resource.description,
-        ...(resource.topics ?? []),
-        ...(resource.levels ?? []),
-        ...(resource.types ?? []),
-      ]
-        .join(' ')
-        .toLowerCase()
-      const matchesQuery =
-        !normalizedQuery || searchableText.includes(normalizedQuery)
-      const matchesTopic =
-        topicFilter === 'all' || resource.topics?.includes(topicFilter)
-      const matchesLevel =
-        levelFilter === 'all' || resource.levels?.includes(levelFilter)
-      const matchesType =
-        typeFilter === 'all' || resource.types?.includes(typeFilter)
-
-      return matchesQuery && matchesTopic && matchesLevel && matchesType
-    })
-  }, [levelFilter, resources, searchQuery, topicFilter, typeFilter])
+  const filteredResources = useMemo(
+    () =>
+      filterResources({
+        levelFilter,
+        resources,
+        searchQuery,
+        topicFilter,
+        typeFilter,
+      }),
+    [levelFilter, resources, searchQuery, topicFilter, typeFilter],
+  )
   const activeFilterCount = [topicFilter, levelFilter, typeFilter].filter(
     (filterValue) => filterValue !== 'all',
   ).length
