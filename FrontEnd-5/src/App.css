@@ -204,6 +204,19 @@
   color: var(--text-muted);
 }
 
+.token-preview {
+  display: inline-flex;
+  max-width: 100%;
+  margin: 16px 0 0;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--text-strong);
+  font-family: var(--mono);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+}
+
 .resource-section {
   margin-top: 28px;
 }

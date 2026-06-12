@@ -15,6 +15,46 @@ const emptyResourceForm = {
   levels: '',
 }
 
+const base64UrlEncode = (value) => {
+  const stringValue = typeof value === 'string' ? value : JSON.stringify(value)
+  const bytes = new TextEncoder().encode(stringValue)
+  const binaryValue = Array.from(bytes, (byte) =>
+    String.fromCharCode(byte),
+  ).join('')
+
+  return btoa(binaryValue)
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '')
+}
+
+const createDemoJwt = (account) => {
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT',
+  }
+  const payload = {
+    sub: account.email,
+    name: account.name,
+    scope: 'codingresources:read',
+    iat: Math.floor(Date.now() / 1000),
+  }
+  const signature = 'course-api-demo-signature'
+
+  return `${base64UrlEncode(header)}.${base64UrlEncode(
+    payload,
+  )}.${base64UrlEncode(signature)}`
+}
+
+const fetchWithAuth = (url, token, options = {}) =>
+  fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
 const getStoredUser = () => {
   const savedUser = localStorage.getItem(SESSION_STORAGE_KEY)
 
@@ -23,7 +63,19 @@ const getStoredUser = () => {
   }
 
   try {
-    return JSON.parse(savedUser)
+    const user = JSON.parse(savedUser)
+
+    if (user.token) {
+      return user
+    }
+
+    const userWithToken = {
+      ...user,
+      token: createDemoJwt(user),
+    }
+
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userWithToken))
+    return userWithToken
   } catch {
     localStorage.removeItem(SESSION_STORAGE_KEY)
     return null
@@ -68,6 +120,7 @@ const saveSession = (account) => {
   const nextUser = {
     email: account.email,
     name: account.name,
+    token: createDemoJwt(account),
   }
 
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextUser))
@@ -298,6 +351,7 @@ function LoginPage({
 }
 
 function Dashboard({ onLogout, user }) {
+  const authToken = user.token
   const [resources, setResources] = useState([])
   const [resourcesStatus, setResourcesStatus] = useState('loading')
   const [resourcesError, setResourcesError] = useState('')
@@ -315,7 +369,7 @@ function Dashboard({ onLogout, user }) {
         setResourcesStatus('loading')
         setResourcesError('')
 
-        const response = await fetch(RESOURCE_API_URL)
+        const response = await fetchWithAuth(RESOURCE_API_URL, authToken)
 
         if (!response.ok) {
           throw new Error('Unable to load coding resources.')
@@ -331,7 +385,7 @@ function Dashboard({ onLogout, user }) {
     }
 
     loadResources()
-  }, [])
+  }, [authToken])
 
   useEffect(() => {
     if (!selectedResourceId) {
@@ -348,7 +402,10 @@ function Dashboard({ onLogout, user }) {
         setSelectedResourceStatus('loading')
         setSelectedResourceError('')
 
-        const response = await fetch(`${RESOURCE_API_URL}/${selectedResourceId}`)
+        const response = await fetchWithAuth(
+          `${RESOURCE_API_URL}/${selectedResourceId}`,
+          authToken,
+        )
 
         if (!response.ok) {
           throw new Error('Unable to load this resource.')
@@ -364,7 +421,7 @@ function Dashboard({ onLogout, user }) {
     }
 
     loadResourceDetail()
-  }, [selectedResourceId])
+  }, [authToken, selectedResourceId])
 
   const handleResourceFormChange = (event) => {
     const { name, value } = event.target
@@ -459,8 +516,11 @@ function Dashboard({ onLogout, user }) {
         </div>
         <h2 id="welcome-title">Welcome, {user.name}</h2>
         <p>
-          This dashboard is only available after login. The course data views
-          can plug into this protected area next.
+          This dashboard is only available after login. Resource API requests
+          are sent with your JWT bearer token.
+        </p>
+        <p className="token-preview" aria-label="Current API token">
+          JWT {authToken.slice(0, 24)}...
         </p>
       </section>
 
