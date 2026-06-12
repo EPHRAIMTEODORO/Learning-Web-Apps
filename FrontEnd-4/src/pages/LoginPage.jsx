@@ -13,7 +13,7 @@ function LoginPage() {
     return <Navigate to="/dashboard" replace />
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
 
@@ -22,7 +22,7 @@ function LoginPage() {
     const password = formData.get('password')
 
     try {
-      const user = validateDemoLogin(loginId, password)
+      const user = await validateDemoLogin(loginId, password)
       login(user, createDemoToken(user))
       navigate(location.state?.from?.pathname ?? '/dashboard', { replace: true })
     } catch (loginError) {

@@ -12,7 +12,7 @@ function RegisterPage() {
     return <Navigate to="/dashboard" replace />
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
 
@@ -22,7 +22,7 @@ function RegisterPage() {
     const password = formData.get('password')
 
     try {
-      const user = createDemoAccount({ email, username, password })
+      const user = await createDemoAccount({ email, username, password })
       login(user, createDemoToken(user))
       navigate('/dashboard', { replace: true })
     } catch (registerError) {

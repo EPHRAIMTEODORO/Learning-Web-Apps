@@ -1,4 +1,5 @@
 const ACCOUNTS_KEY = 'frontend4_demo_accounts'
+const PASSWORD_HASH_ALGORITHM = 'SHA-256'
 
 function getStoredAccounts() {
   const accounts = localStorage.getItem(ACCOUNTS_KEY)
@@ -10,11 +11,32 @@ function saveAccounts(accounts) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
 }
 
+function base64UrlEncodeBytes(bytes) {
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '')
+}
+
 function base64UrlEncode(value) {
   return btoa(JSON.stringify(value))
     .replaceAll('+', '-')
     .replaceAll('/', '_')
     .replaceAll('=', '')
+}
+
+function createPasswordSalt() {
+  const salt = new Uint8Array(16)
+  crypto.getRandomValues(salt)
+
+  return base64UrlEncodeBytes(salt)
+}
+
+async function hashPassword(password, salt) {
+  const passwordBytes = new TextEncoder().encode(`${salt}:${password}`)
+  const passwordHash = await crypto.subtle.digest(PASSWORD_HASH_ALGORITHM, passwordBytes)
+
+  return base64UrlEncodeBytes(new Uint8Array(passwordHash))
 }
 
 export function createDemoToken(user) {
@@ -36,7 +58,7 @@ export function createDemoToken(user) {
   return `${base64UrlEncode(header)}.${base64UrlEncode(payload)}.demo-signature`
 }
 
-export function createDemoAccount({ email, username, password }) {
+export async function createDemoAccount({ email, username, password }) {
   const accounts = getStoredAccounts()
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedUsername = username.trim()
@@ -55,21 +77,29 @@ export function createDemoAccount({ email, username, password }) {
     username: normalizedUsername,
   }
 
-  saveAccounts([...accounts, { ...user, password }])
+  const passwordSalt = createPasswordSalt()
+  const passwordHash = await hashPassword(password, passwordSalt)
+
+  saveAccounts([...accounts, { ...user, passwordHash, passwordSalt }])
 
   return user
 }
 
-export function validateDemoLogin(loginId, password) {
+export async function validateDemoLogin(loginId, password) {
   const normalizedLoginId = loginId.trim().toLowerCase()
   const account = getStoredAccounts().find(
     (storedAccount) =>
-      (storedAccount.email === normalizedLoginId ||
-        storedAccount.username.toLowerCase() === normalizedLoginId) &&
-      storedAccount.password === password,
+      storedAccount.email === normalizedLoginId ||
+      storedAccount.username.toLowerCase() === normalizedLoginId,
   )
 
   if (!account) {
+    throw new Error('Invalid email/username or password.')
+  }
+
+  const passwordHash = await hashPassword(password, account.passwordSalt)
+
+  if (passwordHash !== account.passwordHash) {
     throw new Error('Invalid email/username or password.')
   }
 
