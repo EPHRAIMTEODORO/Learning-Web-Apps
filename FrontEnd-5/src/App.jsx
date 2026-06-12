@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 const SESSION_STORAGE_KEY = 'course-api-user'
 const ACCOUNT_STORAGE_KEY = 'course-api-accounts'
+const RESOURCE_API_URL =
+  'https://api.sampleapis.com/codingresources/codingResources'
 
 const getStoredUser = () => {
   const savedUser = localStorage.getItem(SESSION_STORAGE_KEY)
@@ -262,6 +264,74 @@ function LoginPage({
 }
 
 function Dashboard({ onLogout, user }) {
+  const [resources, setResources] = useState([])
+  const [resourcesStatus, setResourcesStatus] = useState('loading')
+  const [resourcesError, setResourcesError] = useState('')
+  const [selectedResourceId, setSelectedResourceId] = useState(null)
+  const [selectedResource, setSelectedResource] = useState(null)
+  const [selectedResourceStatus, setSelectedResourceStatus] = useState('idle')
+  const [selectedResourceError, setSelectedResourceError] = useState('')
+
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        setResourcesStatus('loading')
+        setResourcesError('')
+
+        const response = await fetch(RESOURCE_API_URL)
+
+        if (!response.ok) {
+          throw new Error('Unable to load coding resources.')
+        }
+
+        const resourceData = await response.json()
+        setResources(resourceData)
+        setResourcesStatus('success')
+      } catch {
+        setResourcesError('Could not load resources. Please try again.')
+        setResourcesStatus('error')
+      }
+    }
+
+    loadResources()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedResourceId) {
+      return
+    }
+
+    const loadResourceDetail = async () => {
+      try {
+        setSelectedResource(null)
+        setSelectedResourceStatus('loading')
+        setSelectedResourceError('')
+
+        const response = await fetch(`${RESOURCE_API_URL}/${selectedResourceId}`)
+
+        if (!response.ok) {
+          throw new Error('Unable to load this resource.')
+        }
+
+        const resourceData = await response.json()
+        setSelectedResource(resourceData)
+        setSelectedResourceStatus('success')
+      } catch {
+        setSelectedResourceError('Could not load this resource. Try again.')
+        setSelectedResourceStatus('error')
+      }
+    }
+
+    loadResourceDetail()
+  }, [selectedResourceId])
+
+  const showResourceList = () => {
+    setSelectedResource(null)
+    setSelectedResourceError('')
+    setSelectedResourceStatus('idle')
+    setSelectedResourceId(null)
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -286,8 +356,143 @@ function Dashboard({ onLogout, user }) {
           can plug into this protected area next.
         </p>
       </section>
+
+      {selectedResourceId ? (
+        <ResourceDetailPage
+          onBack={showResourceList}
+          resource={selectedResource}
+          resourceError={selectedResourceError}
+          resourceStatus={selectedResourceStatus}
+        />
+      ) : (
+        <ResourceListPage
+          onSelectResource={setSelectedResourceId}
+          resources={resources}
+          resourcesError={resourcesError}
+          resourcesStatus={resourcesStatus}
+        />
+      )}
     </main>
   )
+}
+
+function ResourceListPage({
+  onSelectResource,
+  resources,
+  resourcesError,
+  resourcesStatus,
+}) {
+  return (
+    <section className="resource-section" aria-labelledby="resource-list-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Main resource</p>
+          <h2 id="resource-list-title">Coding resources</h2>
+        </div>
+        <span className="count-badge">{resources.length} resources</span>
+      </div>
+
+      {resourcesStatus === 'loading' ? (
+        <StatusPanel message="Loading coding resources..." />
+      ) : null}
+
+      {resourcesStatus === 'error' ? (
+        <StatusPanel message={resourcesError} tone="error" />
+      ) : null}
+
+      {resourcesStatus === 'success' ? (
+        <div className="resource-grid">
+          {resources.map((resource) => (
+            <article className="resource-card" key={resource.id}>
+              <div>
+                <p className="resource-id">Resource #{resource.id}</p>
+                <h3>{resource.description}</h3>
+              </div>
+
+              <TagList items={resource.topics} label="Topics" />
+              <TagList items={resource.levels} label="Levels" />
+
+              <button
+                className="resource-link"
+                type="button"
+                onClick={() => onSelectResource(resource.id)}
+              >
+                View details
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function ResourceDetailPage({ onBack, resource, resourceError, resourceStatus }) {
+  return (
+    <section
+      className="resource-section"
+      aria-labelledby="resource-detail-title"
+    >
+      <button className="back-button" type="button" onClick={onBack}>
+        Back to list
+      </button>
+
+      {resourceStatus === 'loading' ? (
+        <StatusPanel message="Loading resource details..." />
+      ) : null}
+
+      {resourceStatus === 'error' ? (
+        <StatusPanel message={resourceError} tone="error" />
+      ) : null}
+
+      {resourceStatus === 'success' && resource ? (
+        <article className="detail-panel">
+          <p className="resource-id">Resource #{resource.id}</p>
+          <h2 id="resource-detail-title">{resource.description}</h2>
+          <div className="detail-meta">
+            <DetailGroup label="Types" values={resource.types} />
+            <DetailGroup label="Topics" values={resource.topics} />
+            <DetailGroup label="Levels" values={resource.levels} />
+          </div>
+          <a
+            className="external-link"
+            href={resource.url}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open resource
+          </a>
+        </article>
+      ) : null}
+    </section>
+  )
+}
+
+function DetailGroup({ label, values }) {
+  return (
+    <div>
+      <p>{label}</p>
+      <TagList items={values} label={label} />
+    </div>
+  )
+}
+
+function TagList({ items = [], label }) {
+  if (!items.length) {
+    return <p className="empty-tags">No {label.toLowerCase()} listed</p>
+  }
+
+  return (
+    <ul className="tag-list" aria-label={label}>
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  )
+}
+
+function StatusPanel({ message, tone = 'neutral' }) {
+  return <p className={`status-panel ${tone}`}>{message}</p>
 }
 
 export default App
