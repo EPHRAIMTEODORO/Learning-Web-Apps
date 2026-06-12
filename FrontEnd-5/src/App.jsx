@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const SESSION_STORAGE_KEY = 'course-api-user'
@@ -134,6 +134,30 @@ const parseList = (value) =>
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
+
+const getCourseCode = (resource) => {
+  if (resource.isLocal) {
+    return `NEW-${String(resource.id).slice(-4)}`
+  }
+
+  return `CC-${String(resource.id).padStart(3, '0')}`
+}
+
+const getPrimaryValue = (values, fallback) =>
+  values?.length ? values[0] : fallback
+
+const getDepartment = (resource) =>
+  getPrimaryValue(resource.topics, 'General Studies')
+
+const getCredits = (resource) =>
+  Math.min(4, Math.max(1, resource.levels?.length || 1)) + 1
+
+const getStatusLabel = (resource) => (resource.isLocal ? 'Draft' : 'Open')
+
+const getUniqueValues = (resources, key) =>
+  Array.from(new Set(resources.flatMap((resource) => resource[key] ?? []))).sort(
+    (firstValue, secondValue) => firstValue.localeCompare(secondValue),
+  )
 
 function App() {
   const [user, setUser] = useState(getStoredUser)
@@ -285,68 +309,80 @@ function LoginPage({
 
   return (
     <main className="auth-page">
-      <section className="login-panel" aria-labelledby="login-title">
-        <p className="eyebrow">Course API</p>
-        <h1 id="login-title">{title}</h1>
-        <p className="intro">{intro}</p>
+      <section className="auth-card" aria-labelledby="login-title">
+        <div className="auth-visual">
+          <span className="brand-icon">CC</span>
+          <p className="eyebrow">Course Catalog</p>
+          <h1>Modern academic discovery</h1>
+          <p>
+            Access protected course resources, build a custom catalog, and
+            explore learning pathways from one polished workspace.
+          </p>
+        </div>
 
-        <form
-          className="login-form"
-          onSubmit={isSignup ? onSignup : onLogin}
-        >
-          {isSignup ? (
-            <>
-              <label htmlFor="name">Name</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                value={formData.name}
-                onChange={onInputChange}
-                placeholder="Your name"
-              />
-            </>
-          ) : null}
+        <div className="login-panel">
+          <p className="eyebrow">Secure access</p>
+          <h2 id="login-title">{title}</h2>
+          <p className="intro">{intro}</p>
 
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={onInputChange}
-            placeholder="student@example.com"
-          />
-
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={formData.password}
-            onChange={onInputChange}
-            placeholder="Enter your password"
-          />
-
-          {error ? <p className="form-error">{error}</p> : null}
-
-          <button className="primary-button" type="submit">
-            {isSignup ? 'Sign up' : 'Login'}
-          </button>
-        </form>
-
-        <p className="auth-switch">
-          {isSignup ? 'Already have an account?' : 'Need an account?'}
-          <button
-            type="button"
-            onClick={() => onAuthModeChange(isSignup ? 'login' : 'signup')}
+          <form
+            className="login-form"
+            onSubmit={isSignup ? onSignup : onLogin}
           >
-            {isSignup ? 'Sign in' : 'Sign up'}
-          </button>
-        </p>
+            {isSignup ? (
+              <>
+                <label htmlFor="name">Name</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  value={formData.name}
+                  onChange={onInputChange}
+                  placeholder="Your name"
+                />
+              </>
+            ) : null}
+
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={onInputChange}
+              placeholder="student@example.com"
+            />
+
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={onInputChange}
+              placeholder="Enter your password"
+            />
+
+            {error ? <p className="form-error">{error}</p> : null}
+
+            <button className="primary-button" type="submit">
+              {isSignup ? 'Create account' : 'Login'}
+            </button>
+          </form>
+
+          <p className="auth-switch">
+            {isSignup ? 'Already have an account?' : 'Need an account?'}
+            <button
+              type="button"
+              onClick={() => onAuthModeChange(isSignup ? 'login' : 'signup')}
+            >
+              {isSignup ? 'Sign in' : 'Sign up'}
+            </button>
+          </p>
+        </div>
       </section>
     </main>
   )
@@ -366,6 +402,43 @@ function Dashboard({ onLogout, user }) {
   const [selectedResourceStatus, setSelectedResourceStatus] = useState('idle')
   const [selectedResourceError, setSelectedResourceError] = useState('')
   const [detailRequestKey, setDetailRequestKey] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [topicFilter, setTopicFilter] = useState('all')
+  const [levelFilter, setLevelFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+
+  const topics = useMemo(() => getUniqueValues(resources, 'topics'), [resources])
+  const levels = useMemo(() => getUniqueValues(resources, 'levels'), [resources])
+  const types = useMemo(() => getUniqueValues(resources, 'types'), [resources])
+  const filteredResources = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+
+    return resources.filter((resource) => {
+      const searchableText = [
+        getCourseCode(resource),
+        resource.description,
+        ...(resource.topics ?? []),
+        ...(resource.levels ?? []),
+        ...(resource.types ?? []),
+      ]
+        .join(' ')
+        .toLowerCase()
+      const matchesQuery =
+        !normalizedQuery || searchableText.includes(normalizedQuery)
+      const matchesTopic =
+        topicFilter === 'all' || resource.topics?.includes(topicFilter)
+      const matchesLevel =
+        levelFilter === 'all' || resource.levels?.includes(levelFilter)
+      const matchesType =
+        typeFilter === 'all' || resource.types?.includes(typeFilter)
+
+      return matchesQuery && matchesTopic && matchesLevel && matchesType
+    })
+  }, [levelFilter, resources, searchQuery, topicFilter, typeFilter])
+  const activeFilterCount = [topicFilter, levelFilter, typeFilter].filter(
+    (filterValue) => filterValue !== 'all',
+  ).length
+  const hasSearchOrFilters = Boolean(searchQuery.trim()) || activeFilterCount > 0
 
   useEffect(() => {
     const loadResources = async () => {
@@ -498,63 +571,169 @@ function Dashboard({ onLogout, user }) {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Course API</p>
-          <h1>Dashboard</h1>
+      <nav className="topbar" aria-label="Primary navigation">
+        <div className="brand-mark">
+          <span>CC</span>
+          <div>
+            <p>Course Catalog</p>
+            <strong>Academic Portal</strong>
+          </div>
         </div>
 
-        <button className="secondary-button" type="button" onClick={onLogout}>
-          Logout
-        </button>
-      </header>
+        <div className="nav-actions">
+          <span className="nav-pill">Protected</span>
+          <button className="secondary-button" type="button" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
+      </nav>
 
-      <section className="dashboard-panel" aria-labelledby="welcome-title">
-        <div className="dashboard-status">
+      <section className="hero-section" aria-labelledby="catalog-title">
+        <div className="hero-content">
           <p className="eyebrow">Signed in as {user.email}</p>
-          <span className="status-pill">Protected</span>
+          <h1 id="catalog-title">Discover courses built for modern learners</h1>
+          <p>
+            Search, filter, create, and review academic learning resources from
+            a protected course catalog powered by authenticated API requests.
+          </p>
+
+          <div className="hero-search" role="search">
+            <label htmlFor="course-search">Search catalog</label>
+            <input
+              id="course-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search by course, department, level, or topic"
+            />
+          </div>
         </div>
-        <h2 id="welcome-title">Welcome, {user.name}</h2>
-        <p>
-          This dashboard is only available after login. Resource API requests
-          are sent with your JWT bearer token.
-        </p>
-        <p className="token-preview" aria-label="Current API token">
-          JWT {authToken.slice(0, 24)}...
-        </p>
+
+        <aside className="hero-card" aria-label="Catalog summary">
+          <div>
+            <span className="metric-value">{resources.length}</span>
+            <span className="metric-label">Courses available</span>
+          </div>
+          <div>
+            <span className="metric-value">{filteredResources.length}</span>
+            <span className="metric-label">Matching results</span>
+          </div>
+          <p className="token-preview" aria-label="Current API token">
+            JWT {authToken.slice(0, 24)}...
+          </p>
+        </aside>
       </section>
 
-      {selectedResourceId ? (
-        <ResourceDetailPage
-          onRetry={() => setDetailRequestKey((currentKey) => currentKey + 1)}
-          onBack={showResourceList}
-          resource={selectedResource}
-          resourceError={selectedResourceError}
-          resourceStatus={selectedResourceStatus}
-        />
-      ) : (
-        <ResourceListPage
-          createError={createError}
-          createSuccess={createSuccess}
-          onCreateResource={handleCreateResource}
-          onResourceFormChange={handleResourceFormChange}
-          onRetryResources={() =>
-            setResourcesRequestKey((currentKey) => currentKey + 1)
-          }
-          onSelectResource={handleSelectResource}
-          resourceFormData={resourceFormData}
-          resources={resources}
-          resourcesError={resourcesError}
-          resourcesStatus={resourcesStatus}
-        />
-      )}
+      <section className="catalog-shell">
+        <aside className="filter-panel" aria-label="Catalog filters">
+          <div className="filter-heading">
+            <div>
+              <p className="eyebrow">Filters</p>
+              <h2>Refine courses</h2>
+            </div>
+            {hasSearchOrFilters ? (
+              <button
+                className="text-button"
+                type="button"
+                onClick={() => {
+                  setSearchQuery('')
+                  setTopicFilter('all')
+                  setLevelFilter('all')
+                  setTypeFilter('all')
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          <FilterSelect
+            label="Department"
+            onChange={setTopicFilter}
+            options={topics}
+            value={topicFilter}
+          />
+          <FilterSelect
+            label="Level"
+            onChange={setLevelFilter}
+            options={levels}
+            value={levelFilter}
+          />
+          <FilterSelect
+            label="Format"
+            onChange={setTypeFilter}
+            options={types}
+            value={typeFilter}
+          />
+
+          <div className="active-filter-list">
+            {searchQuery.trim() ? <span>Search: {searchQuery.trim()}</span> : null}
+            {topicFilter !== 'all' ? <span>{topicFilter}</span> : null}
+            {levelFilter !== 'all' ? <span>{levelFilter}</span> : null}
+            {typeFilter !== 'all' ? <span>{typeFilter}</span> : null}
+          </div>
+        </aside>
+
+        <div className="catalog-content">
+          {selectedResourceId ? (
+            <ResourceDetailPage
+              onRetry={() => setDetailRequestKey((currentKey) => currentKey + 1)}
+              onBack={showResourceList}
+              resource={selectedResource}
+              resourceError={selectedResourceError}
+              resourceStatus={selectedResourceStatus}
+            />
+          ) : (
+            <ResourceListPage
+              createError={createError}
+              createSuccess={createSuccess}
+              filteredCount={filteredResources.length}
+              hasSearchOrFilters={hasSearchOrFilters}
+              onCreateResource={handleCreateResource}
+              onResourceFormChange={handleResourceFormChange}
+              onRetryResources={() =>
+                setResourcesRequestKey((currentKey) => currentKey + 1)
+              }
+              onSelectResource={handleSelectResource}
+              resourceFormData={resourceFormData}
+              resources={filteredResources}
+              resourcesError={resourcesError}
+              resourcesStatus={resourcesStatus}
+              totalCount={resources.length}
+            />
+          )}
+        </div>
+      </section>
+
+      <footer className="site-footer">
+        <p>Course Catalog</p>
+        <span>Secure academic discovery for students and faculty.</span>
+      </footer>
     </main>
+  )
+}
+
+function FilterSelect({ label, onChange, options, value }) {
+  return (
+    <label className="filter-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="all">All {label.toLowerCase()}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
 function ResourceListPage({
   createError,
   createSuccess,
+  filteredCount,
+  hasSearchOrFilters,
   onCreateResource,
   onResourceFormChange,
   onRetryResources,
@@ -563,15 +742,18 @@ function ResourceListPage({
   resources,
   resourcesError,
   resourcesStatus,
+  totalCount,
 }) {
   return (
     <section className="resource-section" aria-labelledby="resource-list-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Main resource</p>
-          <h2 id="resource-list-title">Coding resources</h2>
+          <p className="eyebrow">Catalog</p>
+          <h2 id="resource-list-title">Featured courses</h2>
         </div>
-        <span className="count-badge">{resources.length} resources</span>
+        <span className="count-badge">
+          {filteredCount} of {totalCount} courses
+        </span>
       </div>
 
       <CreateResourceForm
@@ -603,33 +785,77 @@ function ResourceListPage({
         resources.length ? (
           <div className="resource-grid">
             {resources.map((resource) => (
-              <article className="resource-card" key={resource.id}>
-                <div>
-                  <p className="resource-id">Resource #{resource.id}</p>
-                  <h3>{resource.description}</h3>
-                </div>
-
-                <TagList items={resource.topics} label="Topics" />
-                <TagList items={resource.levels} label="Levels" />
-
-                <button
-                  className="resource-link"
-                  type="button"
-                  onClick={() => onSelectResource(resource.id)}
-                >
-                  View details
-                </button>
-              </article>
+              <CourseCard
+                key={resource.id}
+                onSelectResource={onSelectResource}
+                resource={resource}
+              />
             ))}
           </div>
         ) : (
           <StatusPanel
-            message="Create your first resource to populate the dashboard."
-            title="No resources yet"
+            message={
+              hasSearchOrFilters
+                ? 'Try clearing a filter or searching for a different course.'
+                : 'Create your first resource to populate the dashboard.'
+            }
+            title={hasSearchOrFilters ? 'No matching courses' : 'No courses yet'}
           />
         )
       ) : null}
     </section>
+  )
+}
+
+function CourseCard({ onSelectResource, resource }) {
+  const courseCode = getCourseCode(resource)
+  const department = getDepartment(resource)
+  const credits = getCredits(resource)
+  const status = getStatusLabel(resource)
+
+  return (
+    <article className="resource-card">
+      <div className="card-topline">
+        <span className="course-code">{courseCode}</span>
+        <span className={`course-status ${status.toLowerCase()}`}>{status}</span>
+      </div>
+
+      <div>
+        <h3>{resource.description}</h3>
+        <p className="course-department">{department}</p>
+      </div>
+
+      <dl className="course-meta">
+        <div>
+          <dt>Credits</dt>
+          <dd>{credits}</dd>
+        </div>
+        <div>
+          <dt>Department</dt>
+          <dd>{department}</dd>
+        </div>
+      </dl>
+
+      <TagList items={resource.levels} label="Levels" />
+
+      <div className="card-actions">
+        <button
+          className="resource-link"
+          type="button"
+          onClick={() => onSelectResource(resource.id)}
+        >
+          View details
+        </button>
+        <a
+          className="ghost-link"
+          href={resource.url}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Open
+        </a>
+      </div>
+    </article>
   )
 }
 
@@ -755,11 +981,38 @@ function ResourceDetailPage({
 
       {resourceStatus === 'success' && resource ? (
         <article className="detail-panel">
-          <p className="resource-id">Resource #{resource.id}</p>
-          <h2 id="resource-detail-title">{resource.description}</h2>
+          <div className="detail-hero">
+            <div>
+              <span className="course-code">{getCourseCode(resource)}</span>
+              <h2 id="resource-detail-title">{resource.description}</h2>
+              <p>
+                A curated learning resource from the {getDepartment(resource)}
+                department.
+              </p>
+            </div>
+            <span className={`course-status ${getStatusLabel(resource).toLowerCase()}`}>
+              {getStatusLabel(resource)}
+            </span>
+          </div>
+
+          <dl className="detail-summary">
+            <div>
+              <dt>Credits</dt>
+              <dd>{getCredits(resource)}</dd>
+            </div>
+            <div>
+              <dt>Department</dt>
+              <dd>{getDepartment(resource)}</dd>
+            </div>
+            <div>
+              <dt>Course Code</dt>
+              <dd>{getCourseCode(resource)}</dd>
+            </div>
+          </dl>
+
           <div className="detail-meta">
-            <DetailGroup label="Types" values={resource.types} />
-            <DetailGroup label="Topics" values={resource.topics} />
+            <DetailGroup label="Formats" values={resource.types} />
+            <DetailGroup label="Departments" values={resource.topics} />
             <DetailGroup label="Levels" values={resource.levels} />
           </div>
           <a
