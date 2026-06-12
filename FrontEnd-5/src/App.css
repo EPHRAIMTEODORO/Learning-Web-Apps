@@ -74,6 +74,13 @@
   font-size: 14px;
 }
 
+.form-success {
+  margin: 4px 0 0;
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .auth-switch {
   display: flex;
   align-items: center;
@@ -118,6 +125,12 @@
   min-height: 48px;
   background: var(--accent);
   color: #fff;
+}
+
+.primary-button.compact {
+  margin-top: 0;
+  min-height: 42px;
+  padding: 0 18px;
 }
 
 .secondary-button {
@@ -216,6 +229,59 @@
   font-size: 14px;
   font-weight: 700;
   padding: 8px 12px;
+}
+
+.create-form {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+  padding: 22px;
+}
+
+.create-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.create-form-heading h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.create-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.create-form-grid label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.create-form-grid input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--text-strong);
+  padding: 11px 12px;
+}
+
+.create-form-grid input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+  outline: none;
 }
 
 .resource-grid {
@@ -387,6 +453,18 @@
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .create-form-heading {
+    flex-direction: column;
+  }
+
+  .primary-button.compact {
+    width: 100%;
+  }
+
+  .create-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .resource-grid {

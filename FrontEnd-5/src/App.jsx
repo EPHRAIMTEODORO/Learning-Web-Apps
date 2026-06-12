@@ -3,8 +3,17 @@ import './App.css'
 
 const SESSION_STORAGE_KEY = 'course-api-user'
 const ACCOUNT_STORAGE_KEY = 'course-api-accounts'
+const CREATED_RESOURCES_STORAGE_KEY = 'course-api-created-resources'
 const RESOURCE_API_URL =
   'https://api.sampleapis.com/codingresources/codingResources'
+
+const emptyResourceForm = {
+  description: '',
+  url: '',
+  types: '',
+  topics: '',
+  levels: '',
+}
 
 const getStoredUser = () => {
   const savedUser = localStorage.getItem(SESSION_STORAGE_KEY)
@@ -36,6 +45,25 @@ const getStoredAccounts = () => {
   }
 }
 
+const getStoredCreatedResources = () => {
+  const savedResources = localStorage.getItem(CREATED_RESOURCES_STORAGE_KEY)
+
+  if (!savedResources) {
+    return []
+  }
+
+  try {
+    return JSON.parse(savedResources)
+  } catch {
+    localStorage.removeItem(CREATED_RESOURCES_STORAGE_KEY)
+    return []
+  }
+}
+
+const saveCreatedResources = (resources) => {
+  localStorage.setItem(CREATED_RESOURCES_STORAGE_KEY, JSON.stringify(resources))
+}
+
 const saveSession = (account) => {
   const nextUser = {
     email: account.email,
@@ -45,6 +73,12 @@ const saveSession = (account) => {
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextUser))
   return nextUser
 }
+
+const parseList = (value) =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
 
 function App() {
   const [user, setUser] = useState(getStoredUser)
@@ -267,6 +301,9 @@ function Dashboard({ onLogout, user }) {
   const [resources, setResources] = useState([])
   const [resourcesStatus, setResourcesStatus] = useState('loading')
   const [resourcesError, setResourcesError] = useState('')
+  const [resourceFormData, setResourceFormData] = useState(emptyResourceForm)
+  const [createError, setCreateError] = useState('')
+  const [createSuccess, setCreateSuccess] = useState('')
   const [selectedResourceId, setSelectedResourceId] = useState(null)
   const [selectedResource, setSelectedResource] = useState(null)
   const [selectedResourceStatus, setSelectedResourceStatus] = useState('idle')
@@ -285,7 +322,7 @@ function Dashboard({ onLogout, user }) {
         }
 
         const resourceData = await response.json()
-        setResources(resourceData)
+        setResources([...getStoredCreatedResources(), ...resourceData])
         setResourcesStatus('success')
       } catch {
         setResourcesError('Could not load resources. Please try again.')
@@ -298,6 +335,10 @@ function Dashboard({ onLogout, user }) {
 
   useEffect(() => {
     if (!selectedResourceId) {
+      return
+    }
+
+    if (String(selectedResourceId).startsWith('local-')) {
       return
     }
 
@@ -324,6 +365,72 @@ function Dashboard({ onLogout, user }) {
 
     loadResourceDetail()
   }, [selectedResourceId])
+
+  const handleResourceFormChange = (event) => {
+    const { name, value } = event.target
+
+    setResourceFormData((currentFormData) => ({
+      ...currentFormData,
+      [name]: value,
+    }))
+  }
+
+  const handleCreateResource = (event) => {
+    event.preventDefault()
+    const description = resourceFormData.description.trim()
+    const url = resourceFormData.url.trim()
+
+    if (!description || !url) {
+      setCreateError('Enter a title and URL for the resource.')
+      setCreateSuccess('')
+      return
+    }
+
+    try {
+      new URL(url)
+    } catch {
+      setCreateError('Enter a valid URL.')
+      setCreateSuccess('')
+      return
+    }
+
+    const nextResource = {
+      id: `local-${Date.now()}`,
+      description,
+      url,
+      types: parseList(resourceFormData.types),
+      topics: parseList(resourceFormData.topics),
+      levels: parseList(resourceFormData.levels),
+      isLocal: true,
+    }
+    const nextCreatedResources = [nextResource, ...getStoredCreatedResources()]
+
+    saveCreatedResources(nextCreatedResources)
+    setResources((currentResources) => [nextResource, ...currentResources])
+    setResourceFormData(emptyResourceForm)
+    setCreateError('')
+    setCreateSuccess('Resource created and added to the list.')
+
+    if (resourcesStatus === 'error') {
+      setResourcesStatus('success')
+    }
+  }
+
+  const handleSelectResource = (resourceId) => {
+    const existingResource = resources.find(
+      (resource) => String(resource.id) === String(resourceId),
+    )
+
+    if (existingResource?.isLocal) {
+      setSelectedResource(existingResource)
+      setSelectedResourceError('')
+      setSelectedResourceStatus('success')
+      setSelectedResourceId(resourceId)
+      return
+    }
+
+    setSelectedResourceId(resourceId)
+  }
 
   const showResourceList = () => {
     setSelectedResource(null)
@@ -366,7 +473,12 @@ function Dashboard({ onLogout, user }) {
         />
       ) : (
         <ResourceListPage
-          onSelectResource={setSelectedResourceId}
+          createError={createError}
+          createSuccess={createSuccess}
+          onCreateResource={handleCreateResource}
+          onResourceFormChange={handleResourceFormChange}
+          onSelectResource={handleSelectResource}
+          resourceFormData={resourceFormData}
           resources={resources}
           resourcesError={resourcesError}
           resourcesStatus={resourcesStatus}
@@ -377,7 +489,12 @@ function Dashboard({ onLogout, user }) {
 }
 
 function ResourceListPage({
+  createError,
+  createSuccess,
+  onCreateResource,
+  onResourceFormChange,
   onSelectResource,
+  resourceFormData,
   resources,
   resourcesError,
   resourcesStatus,
@@ -391,6 +508,14 @@ function ResourceListPage({
         </div>
         <span className="count-badge">{resources.length} resources</span>
       </div>
+
+      <CreateResourceForm
+        createError={createError}
+        createSuccess={createSuccess}
+        formData={resourceFormData}
+        onChange={onResourceFormChange}
+        onSubmit={onCreateResource}
+      />
 
       {resourcesStatus === 'loading' ? (
         <StatusPanel message="Loading coding resources..." />
@@ -424,6 +549,93 @@ function ResourceListPage({
         </div>
       ) : null}
     </section>
+  )
+}
+
+function CreateResourceForm({
+  createError,
+  createSuccess,
+  formData,
+  onChange,
+  onSubmit,
+}) {
+  return (
+    <form className="create-form" onSubmit={onSubmit}>
+      <div className="create-form-heading">
+        <div>
+          <p className="eyebrow">Create</p>
+          <h3>Add a coding resource</h3>
+        </div>
+        <button className="primary-button compact" type="submit">
+          Create
+        </button>
+      </div>
+
+      <div className="create-form-grid">
+        <label htmlFor="resource-description">
+          Title
+          <input
+            id="resource-description"
+            name="description"
+            type="text"
+            value={formData.description}
+            onChange={onChange}
+            placeholder="React state management guide"
+          />
+        </label>
+
+        <label htmlFor="resource-url">
+          URL
+          <input
+            id="resource-url"
+            name="url"
+            type="url"
+            value={formData.url}
+            onChange={onChange}
+            placeholder="https://example.com/resource"
+          />
+        </label>
+
+        <label htmlFor="resource-topics">
+          Topics
+          <input
+            id="resource-topics"
+            name="topics"
+            type="text"
+            value={formData.topics}
+            onChange={onChange}
+            placeholder="react, javascript"
+          />
+        </label>
+
+        <label htmlFor="resource-types">
+          Types
+          <input
+            id="resource-types"
+            name="types"
+            type="text"
+            value={formData.types}
+            onChange={onChange}
+            placeholder="tutorial, guide"
+          />
+        </label>
+
+        <label htmlFor="resource-levels">
+          Levels
+          <input
+            id="resource-levels"
+            name="levels"
+            type="text"
+            value={formData.levels}
+            onChange={onChange}
+            placeholder="beginner, intermediate"
+          />
+        </label>
+      </div>
+
+      {createError ? <p className="form-error">{createError}</p> : null}
+      {createSuccess ? <p className="form-success">{createSuccess}</p> : null}
+    </form>
   )
 }
 
