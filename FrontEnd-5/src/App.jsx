@@ -4,8 +4,10 @@ import './App.css'
 const SESSION_STORAGE_KEY = 'course-api-user'
 const ACCOUNT_STORAGE_KEY = 'course-api-accounts'
 const CREATED_RESOURCES_STORAGE_KEY = 'course-api-created-resources'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'https://api.sampleapis.com'
 const RESOURCE_API_URL =
-  'https://api.sampleapis.com/codingresources/codingResources'
+  `${API_BASE_URL.replace(/\/$/, '')}/codingresources/codingResources`
 
 const emptyResourceForm = {
   description: '',
@@ -355,6 +357,7 @@ function Dashboard({ onLogout, user }) {
   const [resources, setResources] = useState([])
   const [resourcesStatus, setResourcesStatus] = useState('loading')
   const [resourcesError, setResourcesError] = useState('')
+  const [resourcesRequestKey, setResourcesRequestKey] = useState(0)
   const [resourceFormData, setResourceFormData] = useState(emptyResourceForm)
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
@@ -362,6 +365,7 @@ function Dashboard({ onLogout, user }) {
   const [selectedResource, setSelectedResource] = useState(null)
   const [selectedResourceStatus, setSelectedResourceStatus] = useState('idle')
   const [selectedResourceError, setSelectedResourceError] = useState('')
+  const [detailRequestKey, setDetailRequestKey] = useState(0)
 
   useEffect(() => {
     const loadResources = async () => {
@@ -385,14 +389,10 @@ function Dashboard({ onLogout, user }) {
     }
 
     loadResources()
-  }, [authToken])
+  }, [authToken, resourcesRequestKey])
 
   useEffect(() => {
-    if (!selectedResourceId) {
-      return
-    }
-
-    if (String(selectedResourceId).startsWith('local-')) {
+    if (!selectedResourceId || String(selectedResourceId).startsWith('local-')) {
       return
     }
 
@@ -421,7 +421,7 @@ function Dashboard({ onLogout, user }) {
     }
 
     loadResourceDetail()
-  }, [authToken, selectedResourceId])
+  }, [authToken, detailRequestKey, selectedResourceId])
 
   const handleResourceFormChange = (event) => {
     const { name, value } = event.target
@@ -526,6 +526,7 @@ function Dashboard({ onLogout, user }) {
 
       {selectedResourceId ? (
         <ResourceDetailPage
+          onRetry={() => setDetailRequestKey((currentKey) => currentKey + 1)}
           onBack={showResourceList}
           resource={selectedResource}
           resourceError={selectedResourceError}
@@ -537,6 +538,9 @@ function Dashboard({ onLogout, user }) {
           createSuccess={createSuccess}
           onCreateResource={handleCreateResource}
           onResourceFormChange={handleResourceFormChange}
+          onRetryResources={() =>
+            setResourcesRequestKey((currentKey) => currentKey + 1)
+          }
           onSelectResource={handleSelectResource}
           resourceFormData={resourceFormData}
           resources={resources}
@@ -553,6 +557,7 @@ function ResourceListPage({
   createSuccess,
   onCreateResource,
   onResourceFormChange,
+  onRetryResources,
   onSelectResource,
   resourceFormData,
   resources,
@@ -578,35 +583,51 @@ function ResourceListPage({
       />
 
       {resourcesStatus === 'loading' ? (
-        <StatusPanel message="Loading coding resources..." />
+        <StatusPanel
+          message="Fetching the latest learning resources from the API."
+          title="Loading resources"
+        />
       ) : null}
 
       {resourcesStatus === 'error' ? (
-        <StatusPanel message={resourcesError} tone="error" />
+        <StatusPanel
+          actionLabel="Retry"
+          message={resourcesError}
+          onAction={onRetryResources}
+          title="Resources could not load"
+          tone="error"
+        />
       ) : null}
 
       {resourcesStatus === 'success' ? (
-        <div className="resource-grid">
-          {resources.map((resource) => (
-            <article className="resource-card" key={resource.id}>
-              <div>
-                <p className="resource-id">Resource #{resource.id}</p>
-                <h3>{resource.description}</h3>
-              </div>
+        resources.length ? (
+          <div className="resource-grid">
+            {resources.map((resource) => (
+              <article className="resource-card" key={resource.id}>
+                <div>
+                  <p className="resource-id">Resource #{resource.id}</p>
+                  <h3>{resource.description}</h3>
+                </div>
 
-              <TagList items={resource.topics} label="Topics" />
-              <TagList items={resource.levels} label="Levels" />
+                <TagList items={resource.topics} label="Topics" />
+                <TagList items={resource.levels} label="Levels" />
 
-              <button
-                className="resource-link"
-                type="button"
-                onClick={() => onSelectResource(resource.id)}
-              >
-                View details
-              </button>
-            </article>
-          ))}
-        </div>
+                <button
+                  className="resource-link"
+                  type="button"
+                  onClick={() => onSelectResource(resource.id)}
+                >
+                  View details
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <StatusPanel
+            message="Create your first resource to populate the dashboard."
+            title="No resources yet"
+          />
+        )
       ) : null}
     </section>
   )
@@ -699,7 +720,13 @@ function CreateResourceForm({
   )
 }
 
-function ResourceDetailPage({ onBack, resource, resourceError, resourceStatus }) {
+function ResourceDetailPage({
+  onBack,
+  onRetry,
+  resource,
+  resourceError,
+  resourceStatus,
+}) {
   return (
     <section
       className="resource-section"
@@ -710,11 +737,20 @@ function ResourceDetailPage({ onBack, resource, resourceError, resourceStatus })
       </button>
 
       {resourceStatus === 'loading' ? (
-        <StatusPanel message="Loading resource details..." />
+        <StatusPanel
+          message="Fetching this resource with your bearer token."
+          title="Loading details"
+        />
       ) : null}
 
       {resourceStatus === 'error' ? (
-        <StatusPanel message={resourceError} tone="error" />
+        <StatusPanel
+          actionLabel="Retry"
+          message={resourceError}
+          onAction={onRetry}
+          title="Resource could not load"
+          tone="error"
+        />
       ) : null}
 
       {resourceStatus === 'success' && resource ? (
@@ -763,8 +799,27 @@ function TagList({ items = [], label }) {
   )
 }
 
-function StatusPanel({ message, tone = 'neutral' }) {
-  return <p className={`status-panel ${tone}`}>{message}</p>
+function StatusPanel({
+  actionLabel,
+  message,
+  onAction,
+  title,
+  tone = 'neutral',
+}) {
+  return (
+    <div className={`status-panel ${tone}`} role="status">
+      {tone === 'neutral' ? <span className="loading-dot"></span> : null}
+      <div>
+        <h3>{title}</h3>
+        <p>{message}</p>
+      </div>
+      {onAction ? (
+        <button className="secondary-button compact" type="button" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  )
 }
 
 export default App
