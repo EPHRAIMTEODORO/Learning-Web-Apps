@@ -59,50 +59,83 @@ function App() {
     setUser(null)
   }
 
+  return (
+    <ProtectedDashboard
+      error={error}
+      formData={formData}
+      onInputChange={handleInputChange}
+      onLogin={handleLogin}
+      onLogout={handleLogout}
+      user={user}
+    />
+  )
+}
+
+function ProtectedDashboard({
+  error,
+  formData,
+  onInputChange,
+  onLogin,
+  onLogout,
+  user,
+}) {
   if (!user) {
     return (
-      <main className="auth-page">
-        <section className="login-panel" aria-labelledby="login-title">
-          <p className="eyebrow">Course API</p>
-          <h1 id="login-title">Sign in</h1>
-          <p className="intro">
-            Access your course tools with your class account.
-          </p>
-
-          <form className="login-form" onSubmit={handleLogin}>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="student@example.com"
-            />
-
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter your password"
-            />
-
-            {error ? <p className="form-error">{error}</p> : null}
-
-            <button className="primary-button" type="submit">
-              Login
-            </button>
-          </form>
-        </section>
-      </main>
+      <LoginPage
+        error={error}
+        formData={formData}
+        onInputChange={onInputChange}
+        onLogin={onLogin}
+      />
     )
   }
 
+  return <Dashboard onLogout={onLogout} user={user} />
+}
+
+function LoginPage({ error, formData, onInputChange, onLogin }) {
+  return (
+    <main className="auth-page">
+      <section className="login-panel" aria-labelledby="login-title">
+        <p className="eyebrow">Course API</p>
+        <h1 id="login-title">Sign in</h1>
+        <p className="intro">Access your protected course dashboard.</p>
+
+        <form className="login-form" onSubmit={onLogin}>
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={formData.email}
+            onChange={onInputChange}
+            placeholder="student@example.com"
+          />
+
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={formData.password}
+            onChange={onInputChange}
+            placeholder="Enter your password"
+          />
+
+          {error ? <p className="form-error">{error}</p> : null}
+
+          <button className="primary-button" type="submit">
+            Login
+          </button>
+        </form>
+      </section>
+    </main>
+  )
+}
+
+function Dashboard({ onLogout, user }) {
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -111,17 +144,20 @@ function App() {
           <h1>Dashboard</h1>
         </div>
 
-        <button className="secondary-button" type="button" onClick={handleLogout}>
+        <button className="secondary-button" type="button" onClick={onLogout}>
           Logout
         </button>
       </header>
 
       <section className="dashboard-panel" aria-labelledby="welcome-title">
-        <p className="eyebrow">Signed in as {user.email}</p>
+        <div className="dashboard-status">
+          <p className="eyebrow">Signed in as {user.email}</p>
+          <span className="status-pill">Protected</span>
+        </div>
         <h2 id="welcome-title">Welcome, {user.name}</h2>
         <p>
-          Login and logout are ready. The course data views can plug into this
-          page next.
+          This dashboard is only available after login. The course data views
+          can plug into this protected area next.
         </p>
       </section>
     </main>

@@ -131,8 +131,33 @@
 }
 
 .dashboard-panel {
+  width: min(100%, 640px);
   margin-top: 28px;
   padding: 28px;
+}
+
+.dashboard-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.dashboard-status .eyebrow {
+  margin: 0;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  border: 1px solid var(--success-border);
+  border-radius: 999px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 8px 10px;
 }
 
 .dashboard-panel p:last-child {
@@ -156,5 +181,10 @@
 
   .secondary-button {
     width: 100%;
+  }
+
+  .dashboard-status {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
